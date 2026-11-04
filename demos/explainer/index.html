@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Explainer: kinetic type and data</title>
+    <style>
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #f3ead6; }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+      #stage { position: absolute; inset: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-width="1920" data-height="1080" data-duration="7">
+      <canvas id="stage" width="1920" height="1080"></canvas>
+    </div>
+    <script>
+      // An explainer beat built from code only: a headline typed on, bars that grow with a little overshoot,
+      // numbers that count up, and a row of people filled in by the result.
+      // Data: Darley & Batson (1973), share of seminary students who stopped to help, by how hurried they were.
+      const W = 1920, H = 1080, DUR = 7;
+      const ctx = document.getElementById("stage").getContext("2d");
+      const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+      const smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+      const seg = (t, a, b) => clamp((t - a) / (b - a));
+      // ease with a small overshoot, like a spring settling
+      const back = (x) => { x = clamp(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+      const INK = "#2b2118", RED = "#c2412d", GOLD = "#d99a2b", TEAL = "#2a8c8c";
+      const DATA = [
+        { label: "No hurry", value: 63, color: TEAL, at: 1.5 },
+        { label: "A little late", value: 45, color: GOLD, at: 2.0 },
+        { label: "In a hurry", value: 10, color: RED, at: 2.5 },
+      ];
+
+      function grain() {
+        ctx.fillStyle = "#f3ead6"; ctx.fillRect(0, 0, W, H);
+        const g = ctx.createRadialGradient(W / 2, H / 2, 300, W / 2, H / 2, 1200);
+        g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(1, "rgba(120,90,40,0.25)");
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      }
+      function person(x, y, s, fill) {
+        ctx.fillStyle = fill;
+        ctx.beginPath(); ctx.arc(x, y - 52 * s, 14 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(x - 17 * s, y - 34 * s, 34 * s, 42 * s, 10 * s); ctx.fill();
+        ctx.fillRect(x - 13 * s, y + 4 * s, 10 * s, 26 * s); ctx.fillRect(x + 3 * s, y + 4 * s, 10 * s, 26 * s);
+      }
+
+      function renderAt(t) {
+        t = clamp(t, 0, DUR);
+        grain();
+        // headline typed on
+        const head = "Who stopped to help?";
+        const n = Math.floor(head.length * seg(t, 0.1, 1.0));
+        ctx.fillStyle = INK; ctx.font = "800 84px Georgia, 'Times New Roman', serif";
+        ctx.fillText(head.slice(0, n), 140, 170);
+        if (t < 1.2 && Math.floor(t * 4) % 2 === 0) ctx.fillRect(140 + ctx.measureText(head.slice(0, n)).width + 8, 100, 6, 80);
+        ctx.globalAlpha = smooth(seg(t, 0.9, 1.4));
+        ctx.font = "italic 36px Georgia, serif"; ctx.fillStyle = "#6b5a44";
+        ctx.fillText("40 seminary students on their way to give a talk · Darley & Batson, 1973", 142, 226);
+        ctx.globalAlpha = 1;
+
+        // bars
+        const X0 = 520, Y0 = 330, BH = 120, GAP = 70, MAXW = 1050;
+        DATA.forEach((d, i) => {
+          const y = Y0 + i * (BH + GAP);
+          const u = back(seg(t, d.at, d.at + 0.9));
+          ctx.globalAlpha = smooth(seg(t, d.at - 0.3, d.at));
+          ctx.fillStyle = INK; ctx.font = "700 48px Georgia, serif"; ctx.textAlign = "right";
+          ctx.fillText(d.label, X0 - 40, y + BH / 2 + 16);
+          ctx.textAlign = "left";
+          ctx.fillStyle = "rgba(43,33,24,0.08)"; ctx.fillRect(X0, y, MAXW, BH);
+          ctx.fillStyle = d.color; ctx.fillRect(X0, y, Math.max(0, MAXW * d.value / 100 * u), BH);
+          const shown = Math.round(d.value * clamp(seg(t, d.at, d.at + 0.9)));
+          ctx.fillStyle = INK; ctx.font = "900 64px 'Arial Black', Arial, sans-serif";
+          ctx.fillText(shown + "%", X0 + MAXW * d.value / 100 * u + 24, y + BH / 2 + 22);
+          ctx.globalAlpha = 1;
+        });
+
+        // the punchline: 1 in 10, as people
+        const p = seg(t, 4.2, 5.0);
+        if (p > 0) {
+          ctx.globalAlpha = smooth(p);
+          ctx.fillStyle = INK; ctx.font = "800 54px Georgia, serif";
+          ctx.fillText("In a hurry, only 1 in 10 stopped.", 140, 960);
+          for (let i = 0; i < 10; i++) {
+            const pop = back(seg(t, 4.4 + i * 0.07, 4.8 + i * 0.07));
+            person(1180 + i * 62, 965 - (1 - pop) * 30, 0.95, i === 0 && t > 5.3 ? RED : "rgba(43,33,24,0.35)");
+          }
+          ctx.globalAlpha = 1;
+        }
+        // underline the red bar once the point lands
+        const ul = smooth(seg(t, 5.4, 6.0));
+        if (ul > 0) {
+          ctx.strokeStyle = RED; ctx.lineWidth = 8; ctx.lineCap = "round";
+          ctx.beginPath(); ctx.ellipse(X0 + 165, Y0 + 2 * (BH + GAP) + BH / 2, 175, 88, -0.04, Math.PI, Math.PI + Math.PI * 2 * ul); ctx.stroke();
+        }
+      }
+      window.addEventListener("hf-seek", (e) => renderAt(e.detail.time));
+      renderAt(+(new URLSearchParams(location.hash.slice(1)).get("t")) || window.__hfThreeTime || 0);
+    </script>
+  </body>
+</html>

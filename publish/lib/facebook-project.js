@@ -1,12 +1,12 @@
 // ============================================================
-//  publish/lib/facebook-project.js — phần chung của publish/facebook/photo.js và video.js
+//  publish/lib/facebook-project.js — shared code for publish/facebook/photo.js and video.js
 //
-//  Một project của kênh có fanpage giữ mọi thứ về Facebook trong <project>/publish/:
-//    facebook_post.txt    nội dung bài video; phần sau dòng "---" là bình luận đầu (link YouTube) — chủ kênh duyệt
-//    facebook_photo.txt   nội dung bài ảnh (cùng cách viết)
-//    facebook_photo.jpg   ảnh của bài ảnh (không có thì dùng thumbnail.jpg)
-//    facebook_cover.jpg   ảnh bìa của bài video
-//    facebook.json        đã đăng gì: { videoId, url, commentId, postedAt, photo: {...} } — script ghi
+//  A project of a channel with a fanpage keeps everything Facebook-related in <project>/publish/:
+//    facebook_post.txt    video post text; the part after the "---" line is the first comment (YouTube link) — approved by the channel owner
+//    facebook_photo.txt   photo post text (same format)
+//    facebook_photo.jpg   image for the photo post (falls back to thumbnail.jpg)
+//    facebook_cover.jpg   cover image for the video post
+//    facebook.json        what has been posted: { videoId, url, commentId, postedAt, photo: {...} } — written by the scripts
 // ============================================================
 
 'use strict';
@@ -32,12 +32,12 @@ function open(target) {
 }
 
 function readPost(file) {
-  if (!fs.existsSync(file)) throw new Error(`Chưa có ${studio.rel(file)} — soạn nội dung bài (bình luận link sau dòng ---), cho chủ kênh duyệt`);
+  if (!fs.existsSync(file)) throw new Error(`Missing ${studio.rel(file)} — write the post text (link comment after a --- line) and have the channel owner approve it`);
   const [desc, cmt] = fs.readFileSync(file, 'utf8').split(/^---\s*$/m);
   return { description: (desc || '').trim(), comment: (cmt || '').trim() };
 }
 
-// Trạng thái thật của video trên YouTube (chỉ đọc).
+// Live status of the video on YouTube (read-only).
 async function youtubeStatus(ch, videoId) {
   if (!videoId) return null;
   try {
@@ -46,9 +46,9 @@ async function youtubeStatus(ch, videoId) {
     await yp.initialize();
     const r = await yp.youtube.videos.list({ part: ['status'], id: [videoId] });
     const it = (r.data.items || [])[0];
-    return it ? { privacy: it.status.privacyStatus } : { privacy: 'không tìm thấy' };
+    return it ? { privacy: it.status.privacyStatus } : { privacy: 'not found' };
   } catch (e) {
-    console.log(`⚠️  Không đọc được YouTube: ${e.message}`);
+    console.log(`⚠️  Could not read YouTube: ${e.message}`);
     return null;
   }
 }

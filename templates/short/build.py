@@ -3,13 +3,13 @@
   .venv/bin/python -I templates/short/build.py projects/<channel>/<short>            -> <short>/build/index.html
   cd <short>/build && npx --yes hyperframes@0.8.152 render --output ../out/<name>.mp4
 
-<short>/short.json:
-  {"kicker": "LỊCH SỬ ÍT NGƯỜI BIẾT",               small line over the title (top band, the whole Short)
-   "title": "Ai *ghép* chữ quốc ngữ đầu tiên?",      *word* = yellow
+<short>/short.json (example values are Vietnamese, the language of the narration they must match):
+  {"kicker": "LỊCH SỬ ÍT NGƯỜI BIẾT",               small line over the title (top band, the whole Short) — "LITTLE-KNOWN HISTORY"
+   "title": "Ai *ghép* chữ quốc ngữ đầu tiên?",      *word* = yellow — "Who first put together the Vietnamese alphabet?"
    "highlight": ["Francisco de Pina", "1617"],       words painted yellow in the captions (never split across two captions)
    "keep": ["Bồ Đào Nha", "Hà Nội"],                  other phrases never split across two captions
    "tail": 2.5,                                      seconds after the last line (end card)
-   "end": "Tên Kênh Của Bạn",                      small line on the end card
+   "end": "Tên Kênh Của Bạn",                      small line on the end card ("Your Channel Name")
    "bed": ["audio/sfx/tranh-bed.flac", 0.16],        music under everything [file, volume]
    "scenes": [{"img": "tableaux/s01/bg.jpg", "line": 1, "move": "in"}, ...],
         a scene starts at its narration line and lasts until the next scene; move: in | out | up | down | left | right
@@ -55,7 +55,8 @@ def lines_text(path):
     return out
 
 
-# never end a caption on these words (the phrase would hang: "của / Rhodes", "ngoài ba / mươi")
+# never end a caption on these words (the phrase would hang: "của / Rhodes", "ngoài ba / mươi").
+# Data: Vietnamese function words (of, numbers, articles, prepositions, auxiliaries) matched against the narration text.
 NO_END = {"của", "ba", "hai", "bốn", "năm", "những", "các", "một", "là", "ở", "và", "tên", "khép", "bằng", "cho", "với",
           "người", "nhiều", "vài", "mấy", "đã", "đang", "sẽ", "không", "rất", "thì", "mà", "nhưng", "có", "ngoài", "trong", "trên", "dưới"}
 
@@ -88,7 +89,7 @@ def chunks(text, keep=(), most=48):
             words = words[best:]
             pieces -= 1
         out.append(" ".join(words))
-    # a lone tiny piece ("ở Rome,") joins the next one when both still fit
+    # a lone tiny piece ("ở Rome," = "in Rome,") joins the next one when both still fit
     merged = []
     for c in out:
         if merged and len(merged[-1]) < 12 and len(merged[-1]) + len(c) < most:

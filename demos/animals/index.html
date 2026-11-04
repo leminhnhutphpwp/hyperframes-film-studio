@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Animals: frame-cycle animation</title>
+    <style>
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+      #stage { position: absolute; inset: 0; }
+      .src { display: none; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-width="1920" data-height="1080" data-duration="7">
+      <canvas id="stage" width="1920" height="1080"></canvas>
+    </div>
+    <!-- every picture is an <img> so the page waits for it before the first frame -->
+    <img class="src" id="bg" src="assets/countryside.jpg" />
+    <img class="src" id="elephant-walk1" src="assets/elephant/walk1.png" /><img class="src" id="elephant-walk2" src="assets/elephant/walk2.png" />
+    <img class="src" id="elephant-walk3" src="assets/elephant/walk3.png" /><img class="src" id="elephant-walk4" src="assets/elephant/walk4.png" />
+    <img class="src" id="elephant-walk5" src="assets/elephant/walk5.png" /><img class="src" id="elephant-walk6" src="assets/elephant/walk6.png" />
+    <img class="src" id="war-horse-gallop1" src="assets/war-horse/gallop1.png" /><img class="src" id="war-horse-gallop2" src="assets/war-horse/gallop2.png" />
+    <img class="src" id="war-horse-gallop3" src="assets/war-horse/gallop3.png" /><img class="src" id="war-horse-gallop4" src="assets/war-horse/gallop4.png" />
+    <img class="src" id="steppe-horse-gallop1" src="assets/steppe-horse/gallop1.png" /><img class="src" id="steppe-horse-gallop2" src="assets/steppe-horse/gallop2.png" />
+    <img class="src" id="steppe-horse-gallop3" src="assets/steppe-horse/gallop3.png" /><img class="src" id="steppe-horse-gallop4" src="assets/steppe-horse/gallop4.png" />
+
+    <script>
+      // Drawn animals (tools/anim_frames.py): each one is a few whole-body drawings played as a cycle.
+      // The page is a pure function of time t, so HyperFrames can seek to any frame.
+      const W = 1920, H = 1080, DUR = 7;
+      const ctx = document.getElementById("stage").getContext("2d");
+      const img = (id) => document.getElementById(id);
+      const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+      const smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+      // a tiny deterministic random, so dust looks the same on every render
+      const rand = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+
+      // frame size 800×550, feet on y=530 (assets/animals.json)
+      const FW = 800, FH = 550, GROUND = 530;
+      const herd = [
+        // kind, frames, frames per second, scale, ground y on screen, x at t=0, speed px/s, depth (0 far … 1 near)
+        { kind: "steppe-horse", n: 4, fps: 9, scale: 0.5, y: 650, x0: 300, v: 430, z: 0.25 },
+        { kind: "steppe-horse", n: 4, fps: 9, scale: 0.48, y: 675, x0: -350, v: 450, z: 0.3, phase: 2 },
+        { kind: "steppe-horse", n: 4, fps: 9, scale: 0.5, y: 700, x0: -1300, v: 440, z: 0.32, phase: 1 },
+        { kind: "elephant", n: 6, fps: 5, scale: 0.95, y: 830, x0: 120, v: 140, z: 0.6 },
+        { kind: "elephant", n: 6, fps: 5, scale: 0.8, y: 760, x0: -560, v: 135, z: 0.5, phase: 3 },
+        { kind: "war-horse", n: 4, fps: 10, scale: 0.95, y: 1020, x0: -700, v: 720, z: 1.0 },
+        { kind: "war-horse", n: 4, fps: 10, scale: 0.9, y: 990, x0: -2900, v: 700, z: 0.95, phase: 2 },
+      ];
+
+      function drawAnimal(a, t) {
+        const tt = t;
+        const i = (Math.floor(tt * a.fps) + (a.phase || 0)) % a.n;
+        const frame = img(`${a.kind}-${a.kind === "elephant" ? "walk" : "gallop"}${i + 1}`);
+        // wrap round so the field never empties: leave at the right, come back from the left
+        const s = a.scale, span = W + FW * s + 200;
+        const x = ((((a.x0 + a.v * tt) + FW * s + 100) % span) + span) % span - FW * s - 100;
+        const bob = a.kind === "elephant" ? Math.sin(tt * a.fps * Math.PI / 3) * 3 : Math.abs(Math.sin(tt * a.fps * Math.PI / 2)) * -10 * s;
+        // soft shadow under the feet
+        ctx.save();
+        ctx.globalAlpha = 0.28 + 0.12 * a.z;
+        ctx.fillStyle = "#2a2412";
+        ctx.beginPath();
+        ctx.ellipse(x + FW * s * 0.5, a.y + 4, FW * s * 0.32, 16 * s + 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        // dust kicked up behind running horses
+        if (a.kind !== "elephant") {
+          for (let k = 0; k < 14; k++) {
+            const age = ((tt * 2.2 + k / 14) % 1);
+            const px = x + FW * s * 0.2 - age * 160 * s - rand(k) * 40;
+            const py = a.y - 6 - age * 50 * s - rand(k + 9) * 18;
+            ctx.globalAlpha = (1 - age) * 0.35 * a.z;
+            ctx.fillStyle = "#c9b48a";
+            ctx.beginPath();
+            ctx.arc(px, py, (10 + age * 30) * s, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+        }
+        ctx.drawImage(frame, x, a.y - GROUND * s + bob, FW * s, FH * s);
+      }
+
+      function renderAt(t) {
+        t = clamp(t, 0, DUR);
+        // slow push-in on the countryside, slightly faster for the far hills than the grass (parallax by cropping)
+        const bg = img("bg"), z = 1.06 + 0.05 * smooth(t / DUR);
+        const bw = W * z, bh = bw * bg.naturalHeight / bg.naturalWidth;
+        ctx.drawImage(bg, (W - bw) / 2 - 40 * smooth(t / DUR), H - bh, bw, bh);
+        // warm afternoon light
+        const g = ctx.createLinearGradient(0, 0, W, H);
+        g.addColorStop(0, "rgba(255,214,150,0.22)");
+        g.addColorStop(1, "rgba(60,40,10,0.18)");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
+        // far to near
+        [...herd].sort((a, b) => a.z - b.z).forEach((a) => drawAnimal(a, t));
+        // vignette
+        const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, H * 0.95);
+        v.addColorStop(0, "rgba(0,0,0,0)");
+        v.addColorStop(1, "rgba(20,12,0,0.45)");
+        ctx.fillStyle = v;
+        ctx.fillRect(0, 0, W, H);
+        // caption card
+        const a = smooth((t - 0.4) / 0.6) * (1 - smooth((t - 6.2) / 0.6));
+        ctx.globalAlpha = a;
+        // the card grows to fit the title in whatever serif font the renderer has
+        ctx.font = "600 52px Georgia, 'Times New Roman', serif";
+        const tw = ctx.measureText("Drawn once, animated forever").width;
+        ctx.fillStyle = "rgba(30,22,12,0.72)";
+        ctx.fillRect(80, 80, tw + 64, 128);
+        ctx.fillStyle = "#f3e6c8";
+        ctx.fillText("Drawn once, animated forever", 112, 152);
+        ctx.font = "italic 28px Georgia, serif";
+        ctx.fillStyle = "#d9c79f";
+        ctx.fillText("whole-body walk and gallop cycles", 114, 190);
+        ctx.globalAlpha = 1;
+      }
+
+      let last = 0;
+      window.addEventListener("hf-seek", (e) => { last = e.detail.time; renderAt(last); });
+      window.addEventListener("load", () => renderAt(last || +(new URLSearchParams(location.hash.slice(1)).get("t")) || 0));
+      renderAt(+(new URLSearchParams(location.hash.slice(1)).get("t")) || window.__hfThreeTime || 0);
+    </script>
+  </body>
+</html>

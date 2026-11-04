@@ -1,24 +1,29 @@
-# Khuôn Shorts dọc (1080×1920)
+# Vertical Shorts template (1080×1920)
 
-Một Short đứng riêng (không cắt từ phim dài): tranh dọc vẽ riêng phủ kín khung, camera trôi chậm, hoà tan giữa cảnh,
-chữ từng câu đốt vào hình (tô vàng tên riêng / năm), thẻ năm + địa danh, tiêu đề cố định ở trên, giọng + nhạc nền +
-tiếng động có fade. Cấu trúc một Short: `projects/<kênh>/<tên-short>/`.
+A standalone Short (not cut from a long film): portrait tableaux drawn for it fill the frame, the camera drifts
+slowly, scenes dissolve into each other, captions are burned in sentence by sentence (names and years highlighted in
+yellow), a year + place card, a fixed title at the top, and voice + music bed + sound effects with fades. A Short
+lives in `projects/<channel>/<short-name>/`.
 
 ```bash
-P=projects/<kênh>/<tên>
-# 1. source/facts.md (mỗi chi tiết một nguồn) → narration.vi.txt ("NNN câu", dòng trống = ngắt đoạn) — duyệt trước khi thu giọng
+P=projects/<channel>/<name>
+# 1. source/facts.md (one source per detail) → narration.vi.txt ("NNN sentences", blank line = paragraph break) — get it approved before recording
 runtime/venv-vieneu/bin/python tools/tts_vieneu.py $P/narration.vi.txt $P/audio/vi-story --voice "Hải Đăng"
 .venv/bin/python -I tools/assemble_narration.py $P/narration.vi.txt $P/audio/vi-story $P/audio/vi-story/loi-ke-toan-bo.m4a --lead 0.3 --gap 0.6
-# 2. tranh: $P/tableaux/sNN/tableau.json với "flat": true, "portrait": true → (báo số tranh trước)
+# 2. tableaux: $P/tableaux/sNN/tableau.json with "flat": true, "portrait": true → (say how many tableaux first)
 .venv/bin/python -I tools/tableau.py $P/tableaux/s*/tableau.json
-# 3. nhạc nền tự tạo (đàn tranh ngũ cung) — hoặc chọn trong library/sfx
+# 3. a self-made music bed (pentatonic zither) — or pick one from library/sfx
 .venv/bin/python -I tools/synth_audio.py $P/audio/sfx --bed tranh --bed-seconds 100
-# 4. short.json (cảnh, thẻ năm, tiếng động — xem đầu build.py) → dựng, kiểm, render
+# 4. short.json (scenes, year cards, sound effects — see the top of build.py) → build, check, render
 .venv/bin/python -I templates/short/build.py $P
-(cd $P/build && npx --yes hyperframes@0.8.152 check && npx --yes hyperframes@0.8.152 render --workers 4 --output ../out/<tên>.mp4)
+(cd $P/build && npx --yes hyperframes@0.8.152 check && npx --yes hyperframes@0.8.152 render --workers 4 --output ../out/<name>.mp4)
 ```
 
-- Chữ cắt theo cụm nghĩa (≤ ~48 ký tự, 2–3 dòng), không tách tên trong `highlight` / `keep`, không để từ treo cuối
-  dòng ("của", "ba"…); câu cuối (câu hỏi cho người xem) giữ nguyên cả câu tới hết thẻ kết.
-- Vùng an toàn của Shorts: chữ nằm ở y 1180–1440, chừa 120 px bên phải (nút YouTube) và đáy (tên kênh, mô tả).
-- `build/` là bản dựng (git bỏ qua); `out/` → lưu trữ bằng `tools/archive_videos.py` khi đã đăng.
+`"Hải Đăng"` is the name of a VieNeu voice and must be written exactly like this.
+
+- Break captions at units of meaning (≤ ~48 characters, 2–3 lines). Do not split the names listed in `highlight` /
+  `keep`, and do not leave a short function word hanging at the end of a line (in Vietnamese, words like `của` "of" or
+  `ba` "three"). The last sentence (the question to the viewer) stays whole until the end card finishes.
+- Shorts safe area: captions sit at y 1180–1440, with 120 px kept clear on the right (YouTube buttons) and at the
+  bottom (channel name, description).
+- `build/` is the build output (git-ignored); `out/` → archive it with `tools/archive_videos.py` once published.

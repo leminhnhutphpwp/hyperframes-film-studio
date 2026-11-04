@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Daily life: a vertical Short</title>
+    <style>
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; }
+      #stage { position: absolute; inset: 0; }
+      .src { display: none; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-width="1080" data-height="1920" data-duration="8">
+      <canvas id="stage" width="1080" height="1920"></canvas>
+    </div>
+    <img class="src" id="s1" src="assets/late-for-the-talk.jpg" />
+    <img class="src" id="s2" src="assets/man-in-the-doorway.jpg" />
+    <img class="src" id="s3" src="assets/campus-walk.jpg" />
+    <script>
+      // A vertical Short in the style of templates/short: painted stills with slow camera moves, crossfades,
+      // and captions burned in word by word (Shorts autoplay muted, so the words carry the story).
+      const W = 1080, H = 1920, DUR = 8;
+      const ctx = document.getElementById("stage").getContext("2d");
+      const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+      const smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+      const lerp = (a, b, u) => a + (b - a) * u;
+      const seg = (t, a, b) => clamp((t - a) / (b - a));
+
+      // shot: image, start, end, camera from/to as [zoom, x offset, y offset]
+      const SHOTS = [
+        { id: "s1", a: 0, b: 3.0, from: [1.05, 0, 40], to: [1.18, -50, -10] },
+        { id: "s2", a: 2.6, b: 5.6, from: [1.25, 0, -60], to: [1.08, 0, 30] },
+        { id: "s3", a: 5.2, b: 8.2, from: [1.06, 40, 0], to: [1.16, -30, -20] },
+      ];
+      const LINES = [
+        { a: 0.3, b: 2.6, text: "He was late for a talk about kindness." },
+        { a: 2.9, b: 5.2, text: "On the way, a man sat slumped in a doorway." },
+        { a: 5.5, b: 7.8, text: "Would you stop?" },
+      ];
+
+      function shot(s, t) {
+        const u = smooth(seg(t, s.a, s.b));
+        const [z, ox, oy] = s.from.map((v, i) => lerp(v, s.to[i], u));
+        const im = document.getElementById(s.id);
+        const k = Math.max(W / im.naturalWidth, H / im.naturalHeight) * z;
+        const w = im.naturalWidth * k, h = im.naturalHeight * k;
+        ctx.drawImage(im, (W - w) / 2 + ox, (H - h) / 2 + oy, w, h);
+      }
+
+      function wrap(words, maxW) {
+        const rows = [[]];
+        for (const w of words) {
+          const row = rows[rows.length - 1];
+          if (row.length && ctx.measureText([...row, w].join(" ")).width > maxW) rows.push([w]);
+          else row.push(w);
+        }
+        return rows;
+      }
+
+      function caption(l, t) {
+        if (t < l.a - 0.2 || t > l.b + 0.3) return;
+        const words = l.text.split(" ");
+        ctx.font = "900 76px 'Arial Black', 'Helvetica Neue', Arial, sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        const rows = wrap(words, W - 160);
+        const out = 1 - smooth(seg(t, l.b, l.b + 0.3));
+        let i = 0;
+        rows.forEach((row, r) => {
+          const y = 1380 + r * 96 - (rows.length - 1) * 48;
+          const full = row.join(" ");
+          let x = W / 2 - ctx.measureText(full).width / 2;
+          for (const w of row) {
+            const appear = l.a + (i / words.length) * (l.b - l.a) * 0.6;
+            const pop = smooth(seg(t, appear, appear + 0.15));
+            const ww = ctx.measureText(w).width;
+            const cx = x + ww / 2;
+            ctx.save();
+            ctx.globalAlpha = pop * out;
+            ctx.translate(cx, y); ctx.scale(0.85 + 0.15 * pop, 0.85 + 0.15 * pop);
+            ctx.lineWidth = 14; ctx.strokeStyle = "rgba(0,0,0,0.85)"; ctx.lineJoin = "round";
+            ctx.strokeText(w, 0, 0);
+            // the word being said is yellow, the rest white
+            const now = t >= appear && t < appear + (l.b - l.a) * 0.6 / words.length + 0.1;
+            ctx.fillStyle = now ? "#ffd84a" : "#ffffff";
+            ctx.fillText(w, 0, 0);
+            ctx.restore();
+            x += ww + ctx.measureText(" ").width;
+            i++;
+          }
+        });
+        ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      }
+
+      function renderAt(t) {
+        t = clamp(t, 0, DUR);
+        ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+        // each shot fades in over the one before it, which stays fully visible until it is covered
+        for (const s of SHOTS) {
+          if (t < s.a || t > s.b) continue;
+          ctx.globalAlpha = s.a === 0 ? 1 : smooth(seg(t, s.a, s.a + 0.4));
+          shot(s, t);
+        }
+        ctx.globalAlpha = 1;
+        // darken top and bottom so the text reads on any picture
+        let g = ctx.createLinearGradient(0, 0, 0, 520);
+        g.addColorStop(0, "rgba(0,0,0,0.65)"); g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, 520);
+        g = ctx.createLinearGradient(0, 1100, 0, H);
+        g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,0.7)");
+        ctx.fillStyle = g; ctx.fillRect(0, 1100, W, H - 1100);
+        // series tag and title
+        ctx.fillStyle = "#ffd84a"; ctx.font = "800 34px 'Helvetica Neue', Arial, sans-serif";
+        ctx.fillText("PSYCHOLOGY · PART 1/3", 72, 150);
+        ctx.fillStyle = "#fff"; ctx.font = "900 62px 'Arial Black', Arial, sans-serif";
+        ctx.fillText("The Good Samaritan", 72, 228);
+        ctx.fillText("experiment, 1973", 72, 300);
+        for (const l of LINES) caption(l, t);
+        // progress bar like a Short's timeline
+        ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.fillRect(0, H - 10, W, 10);
+        ctx.fillStyle = "#ffd84a"; ctx.fillRect(0, H - 10, W * t / DUR, 10);
+      }
+      let last = +(new URLSearchParams(location.hash.slice(1)).get("t")) || 0;
+      window.addEventListener("hf-seek", (e) => { last = e.detail.time; renderAt(last); });
+      window.addEventListener("load", () => renderAt(last));
+      renderAt(window.__hfThreeTime || last);
+    </script>
+  </body>
+</html>

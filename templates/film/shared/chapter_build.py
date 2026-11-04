@@ -1,6 +1,6 @@
 """Build one chapter of a Caesar episode as its own HyperFrames project.
 
-  .venv/bin/python -I projects/my-channel/caesar/phan-3/shared/chapter_build.py projects/my-channel/caesar/phan-3/ch01
+  .venv/bin/python -I projects/my-channel/caesar/part-3/shared/chapter_build.py projects/my-channel/caesar/part-3/ch01
 
 The chapter directory holds chapter.json + js/scenes.js. This script
 - cuts the chapter's window out of the full narration (audio/vi-story/loi-ke-toan-bo.m4a, timing.json): chapters meet
@@ -12,11 +12,11 @@ The chapter directory holds chapter.json + js/scenes.js. This script
 
 chapter.json:
   {"chapter": 1,                                  # 1-based, as in narration.vi.txt "# ──" headers
-   "title": ["Từ ngôi làng đến đế chế", "Câu chuyện La Mã"],      # title card text (optional)
-   "assets": ["kits/nong-dan-y-co@teal", "kits/caesar@purple!head", "cutouts/tup-leu", "anims/voi-chien", ...],  # kind/id[@colour][!parts kept undyed]; anims/<id> → LIB["<id>@anim"] (makeAnimMount)
-   "backdrops": ["doi-song-tiber", "terrains/x"], # library/backdrops/<id>/image.jpg (or another kind) → assets/lib/backdrops/<id>.jpg
-   "tableaux": ["y-thang-ba"],                     # <project>/tableaux/<id>/ (tools/tableau.py) → assets/tableaux/<id>/
-   "sfx": [{"id": "amb-hills", "src": "sang-que-gio-nhe-chim-hot", "at": [1, 0], "until": [3, "end"],
+   "title": ["Từ ngôi làng đến đế chế", "Câu chuyện La Mã"],      # title card text (optional); Vietnamese source text, looked up in TR for other languages
+   "assets": ["kits/roman-citizen@wool", "kits/roman-senator@purple!head", "cutouts/pompey-statue", "anims/<id>", ...],  # kind/id[@colour][!parts kept undyed]; anims/<id> → LIB["<id>@anim"] (makeAnimMount)
+   "backdrops": ["roman-forum", "terrains/x"],    # library/backdrops/<id>/image.jpg (or another kind) → assets/lib/backdrops/<id>.jpg
+   "tableaux": ["ides-toga"],                      # <project>/tableaux/<id>/ (tools/tableau.py) → assets/tableaux/<id>/
+   "sfx": [{"id": "amb-hills", "src": "<library/sfx id>", "at": [1, 0], "until": [3, "end"],
             "vol": 0.3, "fi": 1.0, "fo": 1.0, "track": 3}],                # at/until: [line, seconds | "word" | "end"]
    "clips": [{"id": "clip-x", "src": "assets/clips/x.webm", "at": [5, 0], "until": [7, 0]}],
    "dips": []}
@@ -33,7 +33,7 @@ from PIL import Image, ImageFilter
 
 HERE = Path(__file__).resolve().parent  # shared/
 PROJECT = HERE.parent  # projects/<film> (or projects/<series>/<part>)
-ROOT = next(p for p in PROJECT.parents if (p / "tools" / "asset.py").exists())  # videostudio, however deep the project sits
+ROOT = next(p for p in PROJECT.parents if (p / "tools" / "asset.py").exists())  # repo root, however deep the project sits
 sys.path.insert(0, str(ROOT / "tools"))
 from asset import LIB  # noqa: E402
 from battle import variant, weapon_class  # noqa: E402
@@ -214,7 +214,7 @@ def main(chdir, lang="vi"):
         dst_clip = chdir / c["src"]
         dst_clip.parent.mkdir(parents=True, exist_ok=True)
         src = PROJECT / "clips" / Path(c["src"]).name
-        loc = src.with_name(f"{src.stem}.{lang}{src.suffix}")  # e.g. clips/sting.en.webm: the sister channel's intro
+        loc = src.with_name(f"{src.stem}.{lang}{src.suffix}")  # e.g. clips/sting.en.webm: the English version of the intro
         shutil.copy(loc if loc.exists() else src, dst_clip)
     # "overlay": true — a clip with transparency (WebM alpha) laid over the picture instead of replacing it
     def clip(c, cls, track):

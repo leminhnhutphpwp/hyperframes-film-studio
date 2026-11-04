@@ -55,7 +55,7 @@ def refs(cast):
         d.mkdir(parents=True, exist_ok=True)
         fig = ":".join(x for x in (v["kit"].split("@")[0], (v["heads"] or "").split("@")[0], v["head"] or "") if x)
         tmp = d / "_sheet.png"
-        subprocess.run([str(ROOT / ".venv/bin/python"), "-I", str(ROOT / "tools/rigtest.py"), str(tmp), fig, "--poses", "đứng",
+        subprocess.run([str(ROOT / ".venv/bin/python"), "-I", str(ROOT / "tools/rigtest.py"), str(tmp), fig, "--poses", "stand",
                         "--colour", v["kit"].split("@")[1] if "@" in v["kit"] else "base",
                         "--headcolour", (v["heads"] or "@base").split("@")[1] if v["heads"] else "base"], check=True, capture_output=True)
         im = Image.open(tmp).convert("RGB")
@@ -69,7 +69,7 @@ def refs(cast):
         tmp.unlink()
         spec = {"type": "person", "height": 1.8, "master": f"puppet {k}", "cycles": {"walk": POSES["walk"], "act": POSES["act"]}}
         (d / "anim.json").write_text(json.dumps(spec, indent=1))
-    # Reuse within a costume (user, 2026-10-17): crowds and soldiers of one costume share their moving drawings.
+    # Reuse within a costume: crowds and soldiers of one costume share their moving drawings.
     # Per costume (kit@colour) only LEADS=2 people get walk/act drawings — those already drawn first, then the ones
     # in most chapters; everyone else gets just a standing master (their own face) and borrows the leads' frames
     # (chapter_build.py). Named characters have a costume of their own, so they are always leads.

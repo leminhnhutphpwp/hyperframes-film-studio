@@ -1,10 +1,10 @@
-"""Biến ảnh tin dọc (1080×1920) thành video tin có nhạc nền: ảnh zoom vào thật chậm, nhạc vào/ra êm.
+"""Turn vertical story images (1080×1920) into story videos with background music: a very slow zoom in, soft music fade in/out.
 
-    .venv/bin/python -I tools/story_video.py <nhạc.flac> <ảnh1.jpg> [ảnh2.jpg …] [--seconds 15]
+    .venv/bin/python -I tools/story_video.py <music.flac> <image1.jpg> [image2.jpg …] [--seconds 15]
 
-Mỗi ảnh ra <ảnh>.mp4 cạnh ảnh gốc (H.264 + AAC 48 kHz stereo, 30 fps). Dùng chung MỘT bài nhạc cho cả đợt; mỗi tin
-lấy một đoạn khác nhau, chia đều khắp bài, để xem liền mấy tin không bị nghe lại đúng câu mở đầu.
-Nhạc: bài bạn có quyền dùng (ví dụ nhạc Pixabay không có Content ID) hoặc tools/synth_audio.py.
+Each image becomes <image>.mp4 next to the original (H.264 + AAC 48 kHz stereo, 30 fps). One track is shared by the whole
+batch; each story takes a different section, spread evenly across the track, so watching several in a row never repeats
+the same opening. Music: a track you have the rights to (e.g. Pixabay music without Content ID) or tools/synth_audio.py.
 """
 import argparse
 import subprocess
@@ -28,7 +28,7 @@ def main():
     total = duration(a.music)
     fps, n = 30, int(a.seconds * 30)
     for i, img in enumerate(a.images):
-        # bỏ 3 giây đầu, rồi chia đều các tin ra khắp bài (mỗi tin một đoạn khác nhau)
+        # skip the first 3 seconds, then spread the stories evenly across the track (a different section each)
         step = max(7, int((total - a.seconds - 6) / len(a.images)))
         start = 3 + (step * i) % max(1, int(total - a.seconds - 6))
         out = img.rsplit('.', 1)[0] + '.mp4'
@@ -41,7 +41,7 @@ def main():
                         '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p',
                         '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2', '-movflags', '+faststart', out],
                        check=True)
-        print(out, f'nhạc từ giây {start}')
+        print(out, f'music from {start} s')
 
 
 if __name__ == '__main__':

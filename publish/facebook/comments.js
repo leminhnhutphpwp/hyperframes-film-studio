@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 // ============================================================
-//  publish/facebook/comments.js — bình luận của người xem trên fanpage mà trang CHƯA trả lời + gửi trả lời đã duyệt
+//  publish/facebook/comments.js — viewer comments on the fanpage that the page has NOT replied to + sending an approved reply
 //
-//  Chạy:  node publish/facebook/comments.js --channel=<kênh>                                    # liệt kê (chỉ đọc)
-//         node publish/facebook/comments.js --channel=<kênh> --reply <commentId> "<lời trả lời>"         # xem trước
-//         node publish/facebook/comments.js --channel=<kênh> --reply <commentId> "<lời trả lời>" --yes   # gửi MỘT câu đã duyệt
+//  Run:  node publish/facebook/comments.js --channel=<channel>                                    # list (read-only)
+//        node publish/facebook/comments.js --channel=<channel> --reply <commentId> "<reply text>"         # preview
+//        node publish/facebook/comments.js --channel=<channel> --reply <commentId> "<reply text>" --yes   # send ONE approved reply
 //
-//  Trả lời là gửi tin thay mặt kênh -> agent soạn, CHỦ KÊNH DUYỆT từng câu rồi mới --yes (không tự gửi hàng loạt).
-//  Giọng: xưng "mình", gọi "bạn/các bạn", ấm, ngắn, đúng nội dung người ta viết; không dán link (trừ khi họ hỏi link
-//  xem trọn chuyện — link đã có ở bình luận đầu). Không tự bình luận rồi tự trả lời để "đủ số" nhiệm vụ.
+//  A reply is sent on the channel's behalf -> the agent drafts it, the CHANNEL OWNER APPROVES each one before --yes (no bulk sending).
+//  Tone: refer to yourself as "mình", address viewers as "bạn/các bạn"; warm, short, on what they wrote; no links (unless they ask
+//  for the link to the full story — it is already in the first comment). Never comment and reply to yourself to pad the numbers.
 // ============================================================
 
 'use strict';
@@ -24,21 +24,21 @@ async function main() {
   if (a.flags.reply !== undefined) {
     const id = a.flags.reply;
     const text = a.pos[0];
-    if (typeof id !== 'string' || !text) throw new Error('Cần: --reply <commentId> "<lời trả lời>"');
+    if (typeof id !== 'string' || !text) throw new Error('Needs: --reply <commentId> "<reply text>"');
     const list = await FB.unansweredComments(tok.pageId, tok.access_token);
     const c = list.find((x) => x.commentId === id);
-    if (!c) throw new Error(`Không thấy bình luận ${id} trong danh sách chưa trả lời (đã trả lời rồi, hoặc sai id)`);
-    console.log(`↩️  ${c.from}: "${c.message}"\n   Trả lời: "${text}"`);
-    if (!a.has('yes')) { console.log('(Xem trước — thêm --yes để gửi, sau khi chủ kênh duyệt)'); return; }
+    if (!c) throw new Error(`Comment ${id} not found among unanswered comments (already answered, or wrong id)`);
+    console.log(`↩️  ${c.from}: "${c.message}"\n   Reply: "${text}"`);
+    if (!a.has('yes')) { console.log('(Preview — add --yes to send, once the channel owner has approved it)'); return; }
     const r = await FB.comment(id, tok.access_token, text);
-    console.log(`✅ Đã trả lời (${r.id})`);
+    console.log(`✅ Replied (${r.id})`);
     return;
   }
   const list = await FB.unansweredComments(tok.pageId, tok.access_token);
-  console.log(`Trang: ${tok.pageName} (${tok.pageId})`);
-  if (!list.length) { console.log('Không có bình luận nào của người xem đang chờ trả lời.'); return; }
-  console.log(`💬 ${list.length} bình luận chờ trả lời:`);
-  for (const c of list) console.log(`\n• [${c.commentId}] ${c.from} (${c.createdTime.slice(0, 16).replace('T', ' ')}): ${c.message}\n  trên bài: ${c.postText} — ${c.postUrl}`);
+  console.log(`Page: ${tok.pageName} (${tok.pageId})`);
+  if (!list.length) { console.log('No viewer comments are waiting for a reply.'); return; }
+  console.log(`💬 ${list.length} comments awaiting a reply:`);
+  for (const c of list) console.log(`\n• [${c.commentId}] ${c.from} (${c.createdTime.slice(0, 16).replace('T', ' ')}): ${c.message}\n  on post: ${c.postText} — ${c.postUrl}`);
 }
 
 main().catch(fail);

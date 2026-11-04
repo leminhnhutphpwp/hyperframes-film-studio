@@ -23,25 +23,25 @@
       const P = (x) => Object.assign({}, IDLE, x);
       const marks = window.RIG.marks;
       const POSES = {
-        "đứng": P({}),
-        "đi 1": P(gait(0.39, 0.42)),
-        "đi 2": P(gait(1.16, 0.42)),
-        "giơ tay": P({ aL1: 2.7, aL2: 0.2, aR1: 2.6, aR2: 0.2 }),
-        "chỉ": P({ aR1: 1.5, aR2: 0.05 }),
-        "khoanh/ôm": P({ aL1: 0.6, aL2: 1.9, aR1: 0.7, aR2: 1.8 }),
-        "ghế thấp": Object.assign({}, SEATED, { seatH: 0.3 }),
-        "ngồi": Object.assign({}, SEATED, { seatH: 0.46 }),
-        "ngai cao": Object.assign({}, SEATED, { seatH: 0.75 }),
-        "quỳ": Object.assign({}, KNEEL),
-        "cúi": P({ lean: 0.5, tilt: 0.3 }),
-        "ngửa đầu": P({ tilt: -0.35, lean: -0.08 }),
-        "ngã": P({ fall: Math.PI / 2 - 0.1 }),
-        "cưỡi ngựa": Object.assign({}, RIDING, { ride: true }),
+        "stand": P({}),
+        "walk 1": P(gait(0.39, 0.42)),
+        "walk 2": P(gait(1.16, 0.42)),
+        "arms up": P({ aL1: 2.7, aL2: 0.2, aR1: 2.6, aR2: 0.2 }),
+        "point": P({ aR1: 1.5, aR2: 0.05 }),
+        "fold/hug": P({ aL1: 0.6, aL2: 1.9, aR1: 0.7, aR2: 1.8 }),
+        "low seat": Object.assign({}, SEATED, { seatH: 0.3 }),
+        "sit": Object.assign({}, SEATED, { seatH: 0.46 }),
+        "high throne": Object.assign({}, SEATED, { seatH: 0.75 }),
+        "kneel": Object.assign({}, KNEEL),
+        "bow": P({ lean: 0.5, tilt: 0.3 }),
+        "look up": P({ tilt: -0.35, lean: -0.08 }),
+        "fallen": P({ fall: Math.PI / 2 - 0.1 }),
+        "ride": Object.assign({}, RIDING, { ride: true }),
       };
       if (window.RIG.anims) {
         // drawn animals: every frame of every cycle, with a rider (and the standing drawing without one)
         const as = window.RIG.anims, cwa = 3.6, cha = 3.6;
-        const cols = [["đứng", null, 0], ["không người", null, 0]];
+        const cols = [["stand", null, 0], ["no rider", null, 0]];
         const seen = {};
         for (const a of as) for (const c in LIB[a].frames.cycles) seen[c] = Math.max(seen[c] || 0, LIB[a].frames.cycles[c].length);
         for (const c in seen) for (let i = 0; i < seen[c]; i++) cols.push([`${c} ${i + 1}`, c, i]);
@@ -68,7 +68,7 @@
             if (cyc && !(LIB[aid].frames.cycles[cyc] || [])[i]) return; // this animal has no such frame (elephants don't gallop)
             const x = -wva / 2 + c * cwa + cwa / 2;
             if (LIB[aid].frames.type === "person") {
-              if (n === "không người") return;
+              if (n === "no rider") return;
               const pp = makeAnimPerson(sc, aid, 1.4);
               pp.root.position.set(x, baseY, 0);
               poseAnimPerson(pp, cyc ? LIB[aid].frames.cycles[cyc][i] : "master");
@@ -83,7 +83,7 @@
             const g = new THREE.Mesh(new THREE.PlaneGeometry(cwa * 0.95, 0.012), new THREE.MeshBasicMaterial({ color: 0x9a8a70 }));
             g.position.set(x, baseY, -0.5);
             sc.add(g);
-            if (n !== "không người") {
+            if (n !== "no rider") {
               const R = window.RIG.rider;
               const f = makeFigure(sc, R.kit, R.heads, R.head, big ? 0.75 : 1, R.opts || {});
               rideOn(m, f);
@@ -146,7 +146,7 @@
         setTimeout(() => { window.renderAt(0); window.__ready = true; }, 3000);
       } else if (window.RIG.mounts) {
         // mounts: each animal through its gait (standing, four walk phases, a gallop), with and without a rider
-        const PH = [["đứng", 0, 0], ["bước 0", 0.0, 0.8], ["bước ¼", 0.25, 0.8], ["bước ½", 0.5, 0.8], ["bước ¾", 0.75, 0.8], ["phi", 0.3, 1.25], ["không người", 0.15, 0.8]];
+        const PH = [["stand", 0, 0], ["step 0", 0.0, 0.8], ["step ¼", 0.25, 0.8], ["step ½", 0.5, 0.8], ["step ¾", 0.75, 0.8], ["gallop", 0.3, 1.25], ["no rider", 0.15, 0.8]];
         const want = window.RIG.poses;
         if (want) PH.splice(0, PH.length, ...PH.filter(([n]) => want.includes(n)));
         const ms = window.RIG.mounts, cwm = 3.4, chm = 3.2;
@@ -178,11 +178,11 @@
             const g = new THREE.Mesh(new THREE.PlaneGeometry(cwm * 0.95, 0.012), new THREE.MeshBasicMaterial({ color: 0x9a8a70 }));
             g.position.set(x, baseY, -0.5);
             sc.add(g);
-            if (n !== "không người") {
+            if (n !== "no rider") {
               const R = window.RIG.rider;
               const f = makeFigure(sc, R.kit, R.heads, R.head, big ? 0.62 : 1, R.opts || {});
               rideOn(m, f);
-              applyPose(f, Object.assign({}, RIDING, { aR1: n === "phi" ? 1.4 : 0.5, aR2: 0.3 }));
+              applyPose(f, Object.assign({}, RIDING, { aR1: n === "gallop" ? 1.4 : 0.5, aR2: 0.3 }));
               if (marks) dots.push(f);
             }
             sc.updateMatrixWorld(true);
@@ -199,7 +199,8 @@
         drawM();
         setTimeout(() => { drawM(); window.__ready = true; }, 1200);
       } else {
-      const names = window.RIG.poses ? window.RIG.poses.filter((n) => POSES[n]) : Object.keys(POSES);
+      const names = (window.RIG.poses ? window.RIG.poses.filter((n) => POSES[n]) : Object.keys(POSES))
+        .filter((n) => !POSES[n].ride || window.RIG.mount); // no mount in the library: no riding column
       const figs = window.RIG.figures;
       // cells sized so every figure × pose fits the frame (fewer of them → bigger, for close checks)
       const cols = names.length, rows = figs.length;
@@ -241,7 +242,7 @@
             return;
           }
           const seatH = p.seatH || 0.46;
-          f.root.position.set(x + (n === "ngã" ? 0.7 : 0), baseY + (p.seat ? seatH : 0), 0);
+          f.root.position.set(x + (n === "fallen" ? 0.7 : 0), baseY + (p.seat ? seatH : 0), 0);
           applyPose(f, p);
           if (p.seat) {
             const b = new THREE.Mesh(new THREE.BoxGeometry(0.55, seatH, 0.3), new THREE.MeshBasicMaterial({ color: 0x8a6a44 }));

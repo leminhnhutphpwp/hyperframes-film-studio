@@ -1,10 +1,10 @@
 // ============================================================
-//  publish/lib/facebook.js — gọi Meta Graph API cho fanpage của một kênh
+//  publish/lib/facebook.js — Meta Graph API calls for a channel's fanpage
 //
-//  Dùng app riêng ở chế độ Development (chỉ tài khoản của người dùng, không cần
-//  Meta duyệt). Token của TRANG nằm ở secrets/<kênh>/facebook-token.json (git-ignored),
-//  do publish/facebook/auth.js tạo.
-//  Trang của kênh: channels/<kênh>/channel.js → facebook.pageId.
+//  Uses a dedicated app in Development mode (only your own accounts, no Meta
+//  review needed). The PAGE token lives in secrets/<channel>/facebook-token.json (git-ignored),
+//  created by publish/facebook/auth.js.
+//  The channel's page: channels/<channel>/channel.js → facebook.pageId.
 // ============================================================
 
 'use strict';
@@ -19,14 +19,14 @@ const { Blob } = require('buffer');
 const tokenPath = (ch) => path.join(ch.secrets, 'facebook-token.json');
 const pageIdOf = (ch) => {
   const id = ch.config.facebook && ch.config.facebook.pageId;
-  if (!id) throw new Error(`Kênh ${ch.id} chưa có fanpage (channels/${ch.id}/channel.js → facebook.pageId).`);
+  if (!id) throw new Error(`Channel ${ch.id} has no fanpage (channels/${ch.id}/channel.js → facebook.pageId).`);
   return String(id);
 };
-const VERSION = process.env.FB_GRAPH_VERSION || 'v25.0'; // bản hiện hành trong tài liệu Reels (09/2026)
+const VERSION = process.env.FB_GRAPH_VERSION || 'v25.0'; // current version in the Reels docs at time of writing
 const GRAPH = `https://graph.facebook.com/${VERSION}`;
 const RUPLOAD = `https://rupload.facebook.com/video-upload/${VERSION}`;
 
-// Lỗi Graph API -> Error có message dễ đọc (không in token).
+// Graph API errors -> Error with a readable message (the token is never printed).
 async function graphFetch(url, init = {}) {
   const res = await fetch(url, init);
   const text = await res.text();
@@ -49,54 +49,54 @@ const get = (p, params) => graphFetch(`${GRAPH}/${p}?${form(params)}`);
 const post = (p, params) => graphFetch(`${GRAPH}/${p}`, { method: 'POST', body: form(params) });
 
 function loadPageToken(ch) {
-  const pageId = pageIdOf(ch); // kênh không có fanpage thì dừng ở đây
+  const pageId = pageIdOf(ch); // stops here if the channel has no fanpage
   const file = tokenPath(ch);
   if (!fs.existsSync(file)) {
-    throw new Error(`Chưa có token trang Facebook (${rel(file)}) — chạy node publish/facebook/auth.js --channel=${ch.id}`);
+    throw new Error(`No Facebook page token yet (${rel(file)}) — run node publish/facebook/auth.js --channel=${ch.id}`);
   }
   const t = JSON.parse(fs.readFileSync(file, 'utf8'));
   if (String(t.pageId) !== pageId) {
-    throw new Error(`Token là của trang ${t.pageName} (${t.pageId}), không phải trang kênh (${pageId}) — chạy lại publish/facebook/auth.js`);
+    throw new Error(`Token belongs to page ${t.pageName} (${t.pageId}), not the channel's page (${pageId}) — run publish/facebook/auth.js again`);
   }
   return t;
 }
 
-// Đăng Reel 3 bước: start -> tải file lên rupload -> finish (PUBLISHED). Trả video_id.
-// Đăng Reel theo tài liệu developers.facebook.com/docs/video-api/guides/reels-publishing:
+// Post a Reel in 3 steps: start -> upload the file to rupload -> finish (PUBLISHED). Returns video_id.
+// Reel posting per developers.facebook.com/docs/video-api/guides/reels-publishing:
 //   1) POST /{page}/video_reels upload_phase=start → video_id, upload_url
-//   2) POST upload_url (rupload) với header Authorization/offset/file_size, thân là file → {success:true}
+//   2) POST upload_url (rupload) with Authorization/offset/file_size headers, body is the file → {success:true}
 //   3) POST /{page}/video_reels upload_phase=finish video_state=PUBLISHED|SCHEDULED (+scheduled_publish_time)
-// publishAt (Date, tùy chọn): hẹn giờ — Facebook nhận từ 10 phút tới 29 ngày tới.
+// publishAt (Date, optional): schedule — Facebook accepts 10 minutes to 29 days ahead.
 async function uploadReel({ pageId, token, file, description, publishAt = null }) {
   const start = await post(`${pageId}/video_reels`, { upload_phase: 'start', access_token: token });
   const videoId = start.video_id;
-  if (!videoId) throw new Error(`Bước start không trả video_id: ${JSON.stringify(start).slice(0, 200)}`);
+  if (!videoId) throw new Error(`Start step returned no video_id: ${JSON.stringify(start).slice(0, 200)}`);
   const buf = fs.readFileSync(file);
   const up = await graphFetch(start.upload_url || `${RUPLOAD}/${videoId}`, {
     method: 'POST',
     headers: { Authorization: `OAuth ${token}`, offset: '0', file_size: String(buf.length) },
     body: buf,
   });
-  if (up.success !== true) throw new Error(`Tải file lên chưa thành công: ${JSON.stringify(up).slice(0, 200)}`);
-  // Kiểm tra Facebook đã nhận đủ byte trước khi finish.
+  if (up.success !== true) throw new Error(`File upload did not succeed: ${JSON.stringify(up).slice(0, 200)}`);
+  // Check that Facebook received every byte before finishing.
   const st = (await get(videoId, { fields: 'status', access_token: token })).status || {};
   const got = st.uploading_phase && Number(st.uploading_phase.bytes_transfered);
-  if (got && got !== buf.length) throw new Error(`Facebook mới nhận ${got}/${buf.length} byte`);
+  if (got && got !== buf.length) throw new Error(`Facebook has only received ${got}/${buf.length} bytes`);
   const fin = await post(`${pageId}/video_reels`, {
     upload_phase: 'finish', video_id: videoId, description, access_token: token,
     video_state: publishAt ? 'SCHEDULED' : 'PUBLISHED',
     scheduled_publish_time: publishAt ? Math.floor(publishAt.getTime() / 1000) : undefined,
   });
-  if (fin.success !== true) throw new Error(`Bước finish chưa thành công: ${JSON.stringify(fin).slice(0, 200)}`);
+  if (fin.success !== true) throw new Error(`Finish step did not succeed: ${JSON.stringify(fin).slice(0, 200)}`);
   return videoId;
 }
 
-// Chờ Facebook xử lý + đăng. status.video_status: uploading | upload_complete | processing | ready |
+// Wait for Facebook to process + publish. status.video_status: uploading | upload_complete | processing | ready |
 // error | expired | upload_failed; publishing_phase.status / publish_status (published|scheduled|draft|error).
 const FAIL = new Set(['error', 'expired', 'upload_failed']);
-// Ngay sau khi tải lên, Graph có lúc chưa thấy object: "does not exist, cannot be loaded due to
-// missing permissions" (code 100/33). Video VẪN đang xử lý — chờ rồi hỏi lại, đừng bỏ cuộc
-// (gặp 21/09/2026: bài "Ăn Trộm Mèo Của Chúa" lên trang nhưng script dừng, mất ảnh bìa + bình luận).
+// Right after upload, Graph sometimes cannot see the object yet: "does not exist, cannot be loaded due to
+// missing permissions" (code 100/33). The video IS still processing — wait and ask again, do not give up
+// (otherwise the post goes live but the script stops before setting the cover and posting the comment).
 const NOT_YET = /does not exist|cannot be loaded|Unsupported get request/i;
 async function waitReady(videoId, token, { timeoutSec = 900, log = () => {} } = {}) {
   const t0 = Date.now();
@@ -108,28 +108,28 @@ async function waitReady(videoId, token, { timeoutSec = 900, log = () => {} } = 
       d = await get(videoId, { fields: 'status,permalink_url', access_token: token });
     } catch (e) {
       if (!NOT_YET.test(e.message) || ++notYet > 12) throw e;
-      if (notYet === 1) log('   … Graph chưa thấy video, chờ rồi hỏi lại');
+      if (notYet === 1) log('   … Graph cannot see the video yet, waiting before asking again');
       await new Promise((r) => setTimeout(r, 10000));
       continue;
     }
     const st = d.status || {};
     const pp = st.processing_phase || {};
     const pub = st.publishing_phase || {};
-    const phase = `${st.video_status || '?'} · xử lý ${pp.status || '?'} · đăng ${pub.status || '?'}${pub.publish_status ? '/' + pub.publish_status : ''}`;
+    const phase = `${st.video_status || '?'} · processing ${pp.status || '?'} · publishing ${pub.status || '?'}${pub.publish_status ? '/' + pub.publish_status : ''}`;
     if (phase !== last) { log(`   … ${phase}`); last = phase; }
     if (FAIL.has(st.video_status) || pp.status === 'error' || pub.status === 'error' || pub.publish_status === 'error') {
-      throw new Error(`Facebook báo lỗi video ${videoId}: ${JSON.stringify(st).slice(0, 400)}`);
+      throw new Error(`Facebook reported an error for video ${videoId}: ${JSON.stringify(st).slice(0, 400)}`);
     }
-    // Reel báo publishing_phase; bài video thường có thể không có -> 'ready' là xong.
+    // Reels report publishing_phase; regular video posts may not -> 'ready' means done.
     if (st.video_status === 'ready' && (pub.status === 'complete' || !pub.status)) return d;
     await new Promise((r) => setTimeout(r, 10000));
   }
-  throw new Error(`Hết ${timeoutSec}s mà Facebook chưa xử lý xong video ${videoId} — kiểm tra lại trên trang`);
+  throw new Error(`Facebook did not finish processing video ${videoId} within ${timeoutSec}s — check the page`);
 }
 
-// Đăng NGUYÊN video lên trang (POST /{page-id}/videos, multipart 'source') -> video_id.
-// Khác Reel: khung ngang, dài bao lâu cũng được — từ 21/09/2026 fanpage đăng full, không cắt teaser.
-// publishAt (Date, tùy chọn): hẹn giờ (published=false + scheduled_publish_time).
+// Post the FULL video to the page (POST /{page-id}/videos, multipart 'source') -> video_id.
+// Unlike a Reel: no 9:16 or length limit — the fanpage posts full episodes, not teaser cuts.
+// publishAt (Date, optional): schedule (published=false + scheduled_publish_time).
 async function uploadVideo({ pageId, token, file, description, title = null, publishAt = null }) {
   const fd = new FormData();
   fd.set('access_token', token);
@@ -141,19 +141,19 @@ async function uploadVideo({ pageId, token, file, description, title = null, pub
   }
   fd.set('source', new Blob([fs.readFileSync(file)], { type: 'video/mp4' }), path.basename(file));
   const r = await graphFetch(`${GRAPH}/${pageId}/videos`, { method: 'POST', body: fd });
-  if (!r.id) throw new Error(`Facebook không trả video id: ${JSON.stringify(r).slice(0, 200)}`);
+  if (!r.id) throw new Error(`Facebook returned no video id: ${JSON.stringify(r).slice(0, 200)}`);
   return r.id;
 }
 
-// Số video trang đã đăng trong 24 giờ qua (trang thường bị chặn quanh 50 bài / 24 giờ).
+// Number of videos the page posted in the last 24 hours (pages tend to get blocked around 50 posts / 24 hours).
 async function videosLast24h(pageId, token) {
   const since = Date.now() - 24 * 3600 * 1000;
   const r = await get(`${pageId}/videos`, { fields: 'id,created_time', limit: 100, access_token: token });
   return (r.data || []).filter((x) => new Date(x.created_time).getTime() >= since).length;
 }
 
-// Đặt ảnh bìa (POST /{video-id}/thumbnails, source + is_preferred=true; ≤10 MB, cùng tỉ lệ video;
-// cần pages_read_user_content + pages_manage_engagement).
+// Set the cover image (POST /{video-id}/thumbnails, source + is_preferred=true; ≤10 MB, same aspect ratio as the video;
+// needs pages_read_user_content + pages_manage_engagement).
 async function setThumbnail(videoId, token, file) {
   const fd = new FormData();
   fd.set('access_token', token);
@@ -162,14 +162,14 @@ async function setThumbnail(videoId, token, file) {
   return graphFetch(`${GRAPH}/${videoId}/thumbnails`, { method: 'POST', body: fd });
 }
 
-// Số Reel trang đã đăng trong 24 giờ qua (giới hạn API: 30 bài / 24 giờ trượt).
+// Number of Reels the page posted in the last 24 hours (API limit: 30 posts / rolling 24 hours).
 async function reelsLast24h(pageId, token) {
   const since = Date.now() - 24 * 3600 * 1000;
   const r = await get(`${pageId}/video_reels`, { fields: 'id,created_time', limit: 50, access_token: token });
   return (r.data || []).filter((x) => new Date(x.created_time).getTime() >= since).length;
 }
 
-// Id các video trong một danh sách phát (chỉ đọc — Graph API không cho thêm/sửa danh sách phát).
+// Video ids in a playlist (read-only — the Graph API cannot add to or edit playlists).
 async function playlistVideoIds(listId, token) {
   const ids = [];
   let url = `${GRAPH}/${listId}/videos?${form({ fields: 'id', limit: 100, access_token: token })}`;
@@ -183,7 +183,7 @@ async function playlistVideoIds(listId, token) {
 
 const comment = (objectId, token, message) => post(`${objectId}/comments`, { message, access_token: token });
 
-// Bài có ẢNH trên trang (POST /{page-id}/photos, published=true) -> { id: ảnh, post_id: bài }. Cần pages_manage_posts.
+// PHOTO post on the page (POST /{page-id}/photos, published=true) -> { id: photo, post_id: post }. Needs pages_manage_posts.
 async function uploadPhoto({ pageId, token, file, message }) {
   const fd = new FormData();
   fd.set('access_token', token);
@@ -193,7 +193,7 @@ async function uploadPhoto({ pageId, token, file, message }) {
   return graphFetch(`${GRAPH}/${pageId}/photos`, { method: 'POST', body: fd });
 }
 
-// Bình luận của NGƯỜI XEM (không phải trang) mà trang CHƯA trả lời, trên các bài gần đây của trang.
+// Comments from VIEWERS (not the page) that the page has NOT replied to, on the page's recent posts.
 async function unansweredComments(pageId, token, { posts = 50 } = {}) {
   const r = await get(`${pageId}/feed`, {
     fields: 'id,message,permalink_url,created_time,comments.limit(100){id,from,message,created_time,comments.limit(50){from}}',
@@ -204,7 +204,7 @@ async function unansweredComments(pageId, token, { posts = 50 } = {}) {
     for (const c of ((p.comments || {}).data || [])) {
       if (c.from && String(c.from.id) === String(pageId)) continue;
       const replied = ((c.comments || {}).data || []).some((x) => x.from && String(x.from.id) === String(pageId));
-      if (!replied) out.push({ commentId: c.id, from: (c.from || {}).name || '(ẩn danh)', message: c.message || '', createdTime: c.created_time,
+      if (!replied) out.push({ commentId: c.id, from: (c.from || {}).name || '(anonymous)', message: c.message || '', createdTime: c.created_time,
         postId: p.id, postText: (p.message || '').split('\n')[0].slice(0, 120), postUrl: p.permalink_url });
     }
   }

@@ -1,7 +1,7 @@
 # hyperframes-film-studio
 
-A code-first studio for **faceless YouTube history films in a paper cut-out style**. You write the narration, and the
-studio does the rest:
+A code-first studio for **faceless YouTube videos**: paper cut-out history films, battles, animals, stick-figure
+animation, vertical Shorts and data explainers. You write the narration, and the studio does the rest:
 
 - draws a reusable library of paper puppets, backdrops and props with an image model;
 - records the narration with a local text-to-speech voice (Vietnamese or English);
@@ -14,9 +14,25 @@ which file to read for which job.
 
 > This project is independent and is not affiliated with or endorsed by HeyGen. It uses HyperFrames as its renderer.
 
-![Paper cut-out battle rendered from samples/battle-paper](docs/preview.gif)
+## Demos
 
-*The bundled `samples/battle-paper` clip, rendered with `npx hyperframes render`.*
+Every clip below was rendered from this repository with `npx hyperframes render`.
+▶ **[Watch the 44-second demo reel with sound](https://github.com/leminhnhutphpwp/hyperframes-film-studio/releases/download/v0.2.0/demo-reel.mp4)**
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/media/history-film.gif" alt="Paper cut-out history film: the Ides of March" /><br /><b>History film</b>: paper puppets, fog, colour grades and a layered painted close-up, narrated in English (<code>templates/film</code>)</td>
+    <td width="50%"><img src="docs/media/battle.gif" alt="Battle map with cavalry flanking" /><br /><b>Battle map</b>: hundreds of puppets, flanking arrows, a moving camera (<code>tools/battle.py</code>)</td>
+  </tr>
+  <tr>
+    <td><img src="docs/media/animals.gif" alt="Elephants and horses walking and galloping" /><br /><b>Animals</b>: drawn once, played as whole-body walk and gallop cycles (<code>demos/animals</code>)</td>
+    <td><img src="docs/media/stickman.gif" alt="Stick figures playing football" /><br /><b>Stick figures</b>: every pose is code, no image assets (<code>demos/stickman</code>)</td>
+  </tr>
+  <tr>
+    <td><img src="docs/media/explainer.gif" alt="Animated bar chart explainer" /><br /><b>Explainer</b>: typed headline, growing bars, counting numbers (<code>demos/explainer</code>)</td>
+    <td align="center"><img src="docs/media/daily-life.gif" alt="Vertical Short with word-by-word captions" height="420" /><br /><b>Daily-life Short</b>: 9:16, slow camera moves, word-by-word captions (<code>demos/daily-life</code>)</td>
+  </tr>
+</table>
 
 ## What's in the box
 
@@ -28,8 +44,9 @@ which file to read for which job.
 | `library/` | Starter asset library: four costume kits, two sets of faces, a cut-out, props and four backdrops, plus `catalog.json` and the house style prompt. |
 | `tools/` | Python tools: draw and cut assets (`asset.py`), whole-body animation frames (`anim_frames.py`), close-up tableaux (`tableau.py`), narration TTS (`tts_vieneu.py`), frame checks, thumbnails, archive. |
 | `publish/` | Node scripts for YouTube (upload, thumbnail, captions, localisations, analytics, retention) and Facebook pages. |
+| `demos/` | Short standalone compositions: animals, stick figures, a vertical daily-life Short, a data explainer. |
 | `samples/battle-paper/` | A small HyperFrames composition that renders on its own. |
-| `docs/` | `setup.md` (machine setup), `quy-trinh.md` (the full film workflow, in Vietnamese). |
+| `docs/` | `setup.md` (machine setup), `workflow.md` (the full film workflow). |
 
 ## Quick start
 
@@ -60,13 +77,12 @@ Leave `IMAGE_BACKEND` empty and the studio picks for you: the API when a key is 
 Draw a new asset, then look it up:
 
 ```bash
-.venv/bin/python -I tools/asset.py draw kit roman-legionary --era co-dai --region dia-trung-hai --role bo-binh-nang \
+.venv/bin/python -I tools/asset.py draw kit roman-legionary --era ancient --region mediterranean --role heavy-infantry \
   --desc "Roman legionary, tunic, segmented armour, rectangular shield, short sword"
 .venv/bin/python -I tools/asset.py list --kind kit
 ```
 
-Era, region and role codes are listed in [`library/eras.md`](library/eras.md) (for example `co-dai` = ancient,
-`dia-trung-hai` = classical Mediterranean, `bo-binh-nang` = heavy infantry).
+Era, region and role codes are listed in [`library/eras.md`](library/eras.md).
 
 Text-to-speech, YouTube sign-in and the rest of the setup are in [`docs/setup.md`](docs/setup.md).
 
@@ -80,7 +96,7 @@ Text-to-speech, YouTube sign-in and the rest of the setup are in [`docs/setup.md
    with `publish/youtube/upload.js`. Uploads are private until you change them.
 
 The full workflow, including how to keep each film different enough for YouTube's "inauthentic content" policy, is in
-[`docs/quy-trinh.md`](docs/quy-trinh.md).
+[`docs/workflow.md`](docs/workflow.md).
 
 ## Good to know
 
@@ -94,17 +110,3 @@ The full workflow, including how to keep each film different enough for YouTube'
 
 Code and the starter assets: [MIT](LICENSE). The bundled Lora font is under the SIL Open Font License 1.1.
 HyperFrames is a separate project with its own licence.
-
----
-
-## Tiếng Việt
-
-Studio làm phim lịch sử dạng rối giấy cho kênh YouTube không lộ mặt, viết bằng code. Bạn viết lời kể, studio lo phần
-còn lại: vẽ thư viện nhân vật và phông bằng mô hình ảnh, đọc lời kể bằng giọng máy chạy trong máy (tiếng Việt hoặc
-tiếng Anh), dựng cảnh bằng HTML rồi render ra MP4 bằng HyperFrames, làm thumbnail và Shorts, và đăng lên YouTube ở
-chế độ riêng tư.
-
-Để vẽ hình, bạn dùng một trong hai cách: cài Codex CLI trên máy và đăng nhập (`codex login`, không cần khoá API),
-hoặc điền khoá của một dịch vụ Images API tương thích OpenAI vào `.env`.
-
-Bắt đầu từ phần **Quick start** ở trên. Quy trình làm một phim đầy đủ nằm ở [`docs/quy-trinh.md`](docs/quy-trinh.md).

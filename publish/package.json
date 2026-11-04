@@ -2,7 +2,7 @@
   "name": "studio-publish",
   "version": "1.0.0",
   "private": true,
-  "description": "Lệnh đăng / số liệu YouTube và Facebook của studio (publish/README.md).",
+  "description": "Studio commands for publishing to YouTube and Facebook and reading their analytics (see publish/README.md).",
   "type": "commonjs",
   "dependencies": {
     "@googleapis/youtube": "^40.0.1",

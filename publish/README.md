@@ -1,42 +1,47 @@
-# publish/ — đăng video và đọc số liệu
+# publish/ — uploading videos and reading analytics
 
-Cài một lần: `cd publish && npm install`. Chạy mọi lệnh từ gốc studio.
-`<project>` là thư mục phim (`projects/<kênh>/<phim>[/<phần>]`); kênh suy ra từ thư mục đó.
-Lệnh cấp kênh cần `--channel=<kênh>` (tên thư mục trong `channels/`, ví dụ `my-channel`). `--lang=en` chọn bản `.en` của file trong `publish/`.
+Install once: `cd publish && npm install`. Run every command from the studio root.
+`<project>` is the film folder (`projects/<channel>/<film>[/<part>]`); the channel is taken from that folder.
+Channel-level commands need `--channel=<channel>` (a folder name in `channels/`, for example `my-channel`).
+`--lang=en` picks the `.en` version of the files in `publish/`.
 
-| Lệnh | Làm gì | Loại |
+| Command | What it does | Kind |
 |---|---|---|
-| `node publish/youtube/analytics.js --channel=<kênh> [--days 90]` | Số liệu thật của kênh: nguồn view, từ khoá tìm, giữ chân từng video | chỉ đọc |
-| `node publish/youtube/retention.js <project\|videoId> [--days 120]` | Người xem rời đi ở chương nào | chỉ đọc |
-| `node publish/youtube/research.js --channel=<kênh> "chủ đề"` | Tìm kênh cùng sân, tập vượt trội → ghi `channels/<kênh>/research/` | chỉ đọc YouTube (tốn hạn mức) |
-| `node publish/facebook/comments.js --channel=<kênh>` | Liệt kê bình luận fanpage chưa trả lời | chỉ đọc |
-| `node publish/youtube/upload.js <project>` | Tải video RIÊNG TƯ + thumbnail, bản dịch, playlist, phụ đề (nếu meta có) | **chủ kênh đồng ý** (`--yes`) |
-| `node publish/youtube/set-privacy.js <project> public\|unlisted\|private` | Đổi chế độ hiển thị | **chủ kênh đồng ý** (`--yes`) |
-| `node publish/youtube/set-title.js <project>` | Đổi tiêu đề theo `youtube-meta*.json` | **chủ kênh đồng ý** (`--yes`) |
-| `node publish/youtube/localize.js <project>` | Thêm tiêu đề/mô tả dịch (`localizations`) | **chủ kênh đồng ý** (`--yes`) |
-| `node publish/youtube/captions.js <project> --langs vi` | Tải track phụ đề .srt | **chủ kênh đồng ý** (`--yes`) |
-| `node publish/youtube/comment.js <project>` | Bình luận đầu từ `publish/comment.txt` | **chủ kênh đồng ý** (`--yes`) |
-| `node publish/youtube/delete.js <project>` | XOÁ HẲN video, dọn bản ghi | **chủ kênh đồng ý** (`--yes`) |
-| `node publish/facebook/video.js <project> --video=<file>` | Đăng nguyên tập lên fanpage + ảnh bìa + bình luận link | **chủ kênh đồng ý** (`--yes`) |
-| `node publish/facebook/photo.js <project>` | Đăng bài ảnh lên fanpage + bình luận link | **chủ kênh đồng ý** (`--yes`) |
-| `node publish/facebook/comments.js --channel=<kênh> --reply <id> "…"` | Trả lời một bình luận đã duyệt | **chủ kênh đồng ý** (`--yes`) |
-| `node publish/youtube/auth.js --channel=<kênh>` / `publish/facebook/auth.js` | Đăng nhập lại, lưu token vào `secrets/<kênh>/` | chủ kênh tự chạy |
+| `node publish/youtube/analytics.js --channel=<channel> [--days 90]` | Real channel analytics: traffic sources, search terms, retention per video | read-only |
+| `node publish/youtube/retention.js <project\|videoId> [--days 120]` | Which chapter viewers leave at | read-only |
+| `node publish/youtube/research.js --channel=<channel> "topic"` | Finds channels in the same niche and outlier episodes → writes `channels/<channel>/research/` | read-only on YouTube (uses quota) |
+| `node publish/facebook/comments.js --channel=<channel>` | Lists Facebook page comments with no reply yet | read-only |
+| `node publish/youtube/upload.js <project>` | Uploads the video as PRIVATE + thumbnail, localisations, playlist, captions (if the meta has them) | **owner approval** (`--yes`) |
+| `node publish/youtube/set-privacy.js <project> public\|unlisted\|private` | Changes visibility | **owner approval** (`--yes`) |
+| `node publish/youtube/set-title.js <project>` | Changes the title from `youtube-meta*.json` | **owner approval** (`--yes`) |
+| `node publish/youtube/localize.js <project>` | Adds translated titles/descriptions (`localizations`) | **owner approval** (`--yes`) |
+| `node publish/youtube/captions.js <project> --langs vi` | Uploads .srt caption tracks | **owner approval** (`--yes`) |
+| `node publish/youtube/comment.js <project>` | Posts the first comment from `publish/comment.txt` | **owner approval** (`--yes`) |
+| `node publish/youtube/delete.js <project>` | PERMANENTLY deletes the video and cleans up the records | **owner approval** (`--yes`) |
+| `node publish/facebook/video.js <project> --video=<file>` | Posts the full episode to the Facebook page + cover image + a link comment | **owner approval** (`--yes`) |
+| `node publish/facebook/photo.js <project>` | Posts a photo post to the Facebook page + a link comment | **owner approval** (`--yes`) |
+| `node publish/facebook/comments.js --channel=<channel> --reply <id> "…"` | Replies to one approved comment | **owner approval** (`--yes`) |
+| `node publish/youtube/auth.js --channel=<channel>` / `publish/facebook/auth.js` | Signs in again and saves the token to `secrets/<channel>/` | the owner runs it |
 
-## Luật
+## Rules
 
-- Không có `--yes` thì mọi lệnh chỉ **xem trước**: in ra việc sẽ làm, không gửi gì.
-- Agent **không bao giờ** chạy upload, set-privacy, set-title, localize, delete, captions, comment (YouTube hay
-  Facebook) với `--yes` nếu chủ kênh chưa nói rõ cho **đúng video đó**. Đồng ý một lần không áp cho video khác.
-- Tải lên luôn **riêng tư**. Chế độ khác chỉ khi có cả `--privacy=<x>` và `--yes`. Công khai, lên lịch, màn hình kết
-  thúc: chủ kênh làm trong Studio.
-- Bản tiếng Anh không lên kênh tiếng Việt (upload.js từ chối khi ngôn ngữ video khác ngôn ngữ kênh).
-- Video đã đăng thì không tải lại (`publish/youtube[.<lang>].json` có là bỏ qua).
-- Token theo từng kênh: `secrets/<kênh>/youtube-token.json`, `secrets/<kênh>/facebook-token.json` (git bỏ qua, không
-  in ra). Mỗi lệnh kiểm token có đúng kênh trong `channels/<kênh>/channel.js` không — sai là dừng.
+- Without `--yes`, every command only **previews**: it prints what it would do and sends nothing.
+- An agent **never** runs upload, set-privacy, set-title, localize, delete, captions or comment (YouTube or Facebook)
+  with `--yes` unless the channel owner has clearly said so for **that exact video**. One approval does not carry
+  over to another video.
+- Uploads are always **private**. Any other visibility needs both `--privacy=<x>` and `--yes`. Making a video public,
+  scheduling it and the end screen are done by the owner in YouTube Studio.
+- An English version does not go to a Vietnamese channel (upload.js refuses when the video language differs from
+  the channel language).
+- A published video is never uploaded again (it is skipped if `publish/youtube[.<lang>].json` exists).
+- Tokens are per channel: `secrets/<channel>/youtube-token.json`, `secrets/<channel>/facebook-token.json` (git-ignored,
+  never printed). Every command checks that the token belongs to the channel in `channels/<channel>/channel.js` — and
+  stops if it does not.
 
-## Ghi lại
+## Records
 
-- `<project>/publish/youtube[.<lang>].json` — videoId, url, status của project.
-- `channels/<kênh>/published/<videoId>.json` — sổ video đã đăng của kênh.
-- `<project>/publish/facebook.json` — bài đã lên fanpage.
-- Video đã dựng nằm trong `<project>/out/` hoặc kho `$STUDIO_ARCHIVE/<cùng đường dẫn> (mặc định archive/)`; lệnh tự tìm cả hai.
+- `<project>/publish/youtube[.<lang>].json` — the project's videoId, url and status.
+- `channels/<channel>/published/<videoId>.json` — the channel's log of published videos.
+- `<project>/publish/facebook.json` — posts made to the Facebook page.
+- Built videos are in `<project>/out/` or the archive `$STUDIO_ARCHIVE/<same path>` (default `archive/`); the commands
+  look in both.

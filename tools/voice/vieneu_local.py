@@ -4,7 +4,7 @@ inside runtime/venv-vieneu. Models: runtime/models/vieneu-v3-turbo + runtime/mod
 import os
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]   # videostudio (tools/voice/ -> ../..)
+ROOT = Path(__file__).resolve().parents[2]   # repo root (tools/voice/ -> ../..)
 BACKBONE = ROOT / "runtime/models/vieneu-v3-turbo"
 CODEC = ROOT / "runtime/models/moss-codec"
 
@@ -22,7 +22,7 @@ def load(precision="fp32"):
     from vieneu._v3_turbo_engine import onnx_runtime_lite as m
     sub = {"int8": "onnx_int8", "fp32": "onnx_update"}[precision]
 
-    def fetch(repo, files, subfolder):          # repo Hugging Face -> thư mục local tương ứng
+    def fetch(repo, files, subfolder):          # Hugging Face repo -> matching local folder
         if "MOSS" in str(repo):
             return CODEC
         return BACKBONE / (subfolder or "")

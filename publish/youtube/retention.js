@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 // ============================================================
-//  publish/youtube/retention.js — người xem bỏ đi ở ĐOẠN NÀO — CHỈ ĐỌC
+//  publish/youtube/retention.js — WHERE viewers drop off — READ-ONLY
 //
-//  YouTube Analytics trả đường giữ chân theo 100 mốc (mỗi mốc 1% video). Script ghép mốc đó với các
-//  CHƯƠNG trong mô tả (dòng "MM:SS Tên chương" của youtube-meta[.<lang>].json; không có project thì đọc
-//  mô tả trên YouTube) để biết lúc người ta rời đi thì phim đang ở đoạn nào.
+//  YouTube Analytics returns the retention curve as 100 points (each 1% of the video). The script matches those points to the
+//  CHAPTERS in the description ("MM:SS Chapter name" lines from youtube-meta[.<lang>].json; without a project it reads the
+//  description on YouTube) to show which part of the film was playing when people left.
 //
-//  audienceWatchRatio          : tỉ lệ người còn xem ở mốc đó (1.0 = còn nguyên)
-//  relativeRetentionPerformance: so với video CÙNG ĐỘ DÀI trên YouTube (0.5 = bằng trung bình)
+//  audienceWatchRatio          : share of viewers still watching at that point (1.0 = everyone)
+//  relativeRetentionPerformance: compared with videos of the SAME LENGTH on YouTube (0.5 = average)
 //
-//  Chạy:  node publish/youtube/retention.js <thư-mục-project | videoId --channel=<kênh>> [--lang=en] [--days 120] [--drops 8]
+//  Run:  node publish/youtube/retention.js <project-folder | videoId --channel=<channel>> [--lang=en] [--days 120] [--drops 8]
 // ============================================================
 
 'use strict';
@@ -18,7 +18,7 @@ const { google } = require('../lib/google');
 const studio = require('../lib/studio');
 const { args, openYouTube, fail } = require('../lib/cli');
 
-// "00:25 Một nền cộng hòa" / "1:02:03 …" -> [{ startSec, text }]
+// "00:25 Opening scene" / "1:02:03 …" -> [{ startSec, text }]
 function chaptersOf(description) {
   const out = [];
   for (const line of String(description || '').split('\n')) {
@@ -39,7 +39,7 @@ const bar = (r) => '█'.repeat(Math.max(0, Math.min(24, Math.round(r * 24)))).p
 async function main() {
   const a = args();
   const target = a.pos[0];
-  if (!target) throw new Error('Cách dùng: node publish/youtube/retention.js <thư-mục-project | videoId --channel=<kênh>> [--lang=en] [--days 120] [--drops 8]');
+  if (!target) throw new Error('Usage: node publish/youtube/retention.js <project-folder | videoId --channel=<channel>> [--lang=en] [--days 120] [--drops 8]');
   const days = a.num('days', 120);
   const nDrops = a.num('drops', 8);
   const { lang } = studio.langOf();
@@ -50,8 +50,8 @@ async function main() {
 
   const meta = await yt.youtube.videos.list({ part: ['snippet', 'contentDetails'], id: [videoId] });
   const item = (meta.data.items || [])[0];
-  if (!item) throw new Error(`Không đọc được video ${videoId}`);
-  if (item.snippet.channelId !== yt.channel.id) throw new Error(`Video ${videoId} không thuộc kênh ${ch.id}.`);
+  if (!item) throw new Error(`Could not read video ${videoId}`);
+  if (item.snippet.channelId !== yt.channel.id) throw new Error(`Video ${videoId} does not belong to channel ${ch.id}.`);
   const m = item.contentDetails.duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
   const durSec = (+(m[1] || 0)) * 3600 + (+(m[2] || 0)) * 60 + (+(m[3] || 0));
 
@@ -66,12 +66,12 @@ async function main() {
   const rows = r.data.rows || [];
   console.log(`📉 ${item.snippet.title.split('|')[0].trim()}`);
   console.log(`   ${videoId} · ${Math.round(durSec)}s · ${startDate} → ${endDate}\n`);
-  if (!rows.length) { console.log('Chưa đủ dữ liệu giữ chân cho video này.'); return; }
+  if (!rows.length) { console.log('Not enough retention data for this video yet.'); return; }
 
   const local = project && studio.readJson(studio.metaFile(project, lang));
   const lines = chaptersOf((local && local.description) || item.snippet.description);
 
-  console.log('ĐƯỜNG GIỮ CHÂN (mỗi dòng 5% video)');
+  console.log('RETENTION CURVE (each line is 5% of the video)');
   for (let i = 0; i < rows.length; i += 5) {
     const [ratio, watch, rel] = rows[i];
     const sec = ratio * durSec;
@@ -86,20 +86,20 @@ async function main() {
     if (d > 0) drops.push({ sec: rows[i][0] * durSec, drop: d, after: rows[i][1] });
   }
   drops.sort((x, y) => y.drop - x.drop);
-  console.log(`\n🔻 ${nDrops} chỗ tụt mạnh nhất — người xem rời đi ở đoạn này:`);
+  console.log(`\n🔻 The ${nDrops} steepest drops — viewers leave at these points:`);
   for (const d of drops.slice(0, nDrops)) {
     const l = lineAt(lines, d.sec);
-    console.log(`  ${String(Math.round(d.sec)).padStart(4)}s  −${(d.drop * 100).toFixed(0)}%  → còn ${(d.after * 100).toFixed(0)}%`
-      + `  ${l ? l.text.slice(0, 62) : '(trước chương đầu)'}`);
+    console.log(`  ${String(Math.round(d.sec)).padStart(4)}s  −${(d.drop * 100).toFixed(0)}%  → ${(d.after * 100).toFixed(0)}% left`
+      + `  ${l ? l.text.slice(0, 62) : '(before the first chapter)'}`);
   }
 
   const rel = rows.map((x) => x[2]).filter((x) => x != null);
   if (rel.length) {
     const avg = rel.reduce((s, x) => s + x, 0) / rel.length;
-    console.log(`\nSo với video cùng độ dài trên YouTube: trung bình ${(avg * 100).toFixed(0)}%`
-      + ' (50% = ngang mức trung bình; thấp hơn nghĩa là giữ chân kém hơn mặt bằng)');
+    console.log(`\nCompared with videos of the same length on YouTube: average ${(avg * 100).toFixed(0)}%`
+      + ' (50% = average; lower means weaker retention than typical)');
   }
-  console.log('\n⚠️  Ít view thì đường này nhiễu — coi xu hướng, đừng bám từng phần trăm.');
+  console.log('\n⚠️  With few views this curve is noisy — look at the trend, not at individual percentages.');
 }
 
 main().catch(fail);

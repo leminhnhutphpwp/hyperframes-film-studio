@@ -1,9 +1,9 @@
 // ============================================================
-//  publish/lib/youtube.js — YouTube Data API cho MỘT kênh của studio
+//  publish/lib/youtube.js — YouTube Data API for ONE studio channel
 //
 //  const yt = new YouTubeProvider(studio.channel({ project }));  await yt.initialize();
-//  Token: secrets/<kênh>/youtube-token.json (tạo bằng: node publish/youtube/auth.js --channel=<kênh>).
-//  Đăng / sửa video gọi assertExpectedChannel() trước: token của kênh khác thì dừng.
+//  Token: secrets/<channel>/youtube-token.json (create it with: node publish/youtube/auth.js --channel=<channel>).
+//  Uploads / edits call assertExpectedChannel() first: a token for another channel stops the run.
 // ============================================================
 
 'use strict';
@@ -17,7 +17,7 @@ const SCOPES = [
   'https://www.googleapis.com/auth/youtube.upload',
   'https://www.googleapis.com/auth/youtube',
   'https://www.googleapis.com/auth/youtube.readonly',
-  // Tải phụ đề (captions.insert) và đọc bình luận cần quyền force-ssl.
+  // Uploading captions (captions.insert) and reading comments need the force-ssl scope.
   'https://www.googleapis.com/auth/youtube.force-ssl'
 ];
 
@@ -26,7 +26,7 @@ const tokenPath = (ch) => path.join(ch.secrets, 'youtube-token.json');
 
 class YouTubeProvider {
   constructor(ch) {
-    if (!ch || !ch.config) throw new Error('YouTubeProvider cần kênh: new YouTubeProvider(studio.channel(...))');
+    if (!ch || !ch.config) throw new Error('YouTubeProvider needs a channel: new YouTubeProvider(studio.channel(...))');
     this.ch = ch;
     this.expectedChannelId = ch.config.channelId;
     this.tokenPath = tokenPath(ch);
@@ -45,12 +45,12 @@ class YouTubeProvider {
 
     this.oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
 
-    // Token lưu sẵn; chưa có -> đăng nhập bằng script riêng (nhận mã qua localhost).
+    // Saved token; if missing -> sign in with the separate script (receives the code via localhost).
     if (!fs.existsSync(this.tokenPath)) {
-      throw new Error(`Chưa có ${rel(this.tokenPath)} — đăng nhập kênh trước: node publish/youtube/auth.js --channel=${this.ch.id}`);
+      throw new Error(`Missing ${rel(this.tokenPath)} — sign in to the channel first: node publish/youtube/auth.js --channel=${this.ch.id}`);
     }
     this.oAuth2Client.setCredentials(JSON.parse(fs.readFileSync(this.tokenPath, 'utf8')));
-    // Google làm mới access token → ghi lại để lần sau không phải làm mới nữa.
+    // Google refreshed the access token → save it so it does not need refreshing next time.
     this.oAuth2Client.on('tokens', (t) => {
       const cur = JSON.parse(fs.readFileSync(this.tokenPath, 'utf8'));
       fs.writeFileSync(this.tokenPath, JSON.stringify({ ...cur, ...t }, null, 2), { mode: 0o600 });
@@ -66,22 +66,22 @@ class YouTubeProvider {
     return true;
   }
 
-  // Chặn đăng nhầm kênh: token phải thuộc EXPECTED_CHANNEL_ID.
+  // Guard against posting to the wrong channel: the token must belong to EXPECTED_CHANNEL_ID.
   assertExpectedChannel() {
-    if (!this.channel) throw new Error('Chưa đọc được thông tin kênh.');
-    if (!this.expectedChannelId) throw new Error(`Chưa có channelId trong channels/${this.ch.id}/channel.js — chặn đăng.`);
+    if (!this.channel) throw new Error('Channel info has not been loaded.');
+    if (!this.expectedChannelId) throw new Error(`No channelId in channels/${this.ch.id}/channel.js — uploads blocked.`);
     if (this.channel.id !== this.expectedChannelId) {
-      throw new Error(`Token đang thuộc kênh "${this.channel.snippet.title}" (${this.channel.id}), `
-        + `không phải kênh ${this.ch.id} (${this.expectedChannelId}). Đăng nhập lại: node publish/youtube/auth.js --channel=${this.ch.id}`);
+      throw new Error(`Token belongs to channel "${this.channel.snippet.title}" (${this.channel.id}), `
+        + `not channel ${this.ch.id} (${this.expectedChannelId}). Sign in again: node publish/youtube/auth.js --channel=${this.ch.id}`);
     }
     return this.channel;
   }
 
-  // Ảnh thumbnail riêng (kênh phải xác minh số điện thoại). YouTube giới hạn 2MB.
+  // Custom thumbnail (the channel must be phone-verified). YouTube limit is 2MB.
   async setThumbnail(videoId, imagePath) {
     const size = fs.statSync(imagePath).size;
     if (size > 2 * 1024 * 1024) {
-      throw new Error(`Thumbnail ${(size / 1048576).toFixed(1)}MB vượt giới hạn 2MB của YouTube`);
+      throw new Error(`Thumbnail ${(size / 1048576).toFixed(1)}MB exceeds YouTube's 2MB limit`);
     }
     const mimeType = /\.png$/i.test(imagePath) ? 'image/png' : 'image/jpeg';
     const res = await this.youtube.thumbnails.set({
@@ -144,7 +144,7 @@ class YouTubeProvider {
               description: (metadata.description || 'Auto-generated video').substring(0, 5000),
               tags: (metadata.tags || []).filter(t => t).slice(0, 30),
               categoryId: metadata.categoryId || '24',
-              // ngôn ngữ tiêu đề/mô tả + ngôn ngữ giọng đọc (vd 'vi')
+              // title/description language + spoken audio language (e.g. 'vi')
               ...(metadata.language ? { defaultLanguage: metadata.language, defaultAudioLanguage: metadata.language } : {}),
             },
             status: {
@@ -321,7 +321,7 @@ class YouTubeProvider {
     }
   }
 
-  // Tìm playlist của kênh theo TÊN (so khớp không phân biệt hoa thường, bỏ khoảng trắng thừa).
+  // Find a channel playlist by TITLE (case-insensitive match, extra whitespace trimmed).
   async findPlaylistByTitle(title) {
     const norm = (s) => String(s || '').normalize('NFC').trim().toLowerCase();
     let pageToken;
@@ -339,11 +339,11 @@ class YouTubeProvider {
     return (res.data.items || []).length > 0;
   }
 
-  // Thêm video vào playlist ĐÃ CÓ theo tên (docs/rules/*: mỗi thể loại một playlist).
-  // Không tự tạo playlist — thiếu thì báo lỗi để người dùng quyết định. Đã có sẵn thì bỏ qua.
+  // Add a video to an EXISTING playlist by title (docs/rules/*: one playlist per genre).
+  // Never creates the playlist — if it is missing, throw so the user decides. Already in it → skip.
   async addToPlaylistByTitle(title, videoId) {
     const pl = await this.findPlaylistByTitle(title);
-    if (!pl) throw new Error(`Kênh chưa có playlist "${title}" — tạo trong Studio (hoặc hỏi người dùng) rồi chạy lại.`);
+    if (!pl) throw new Error(`Channel has no playlist "${title}" — create it in Studio (or ask the user) and run again.`);
     if (await this.isVideoInPlaylist(pl.playlistId, videoId)) return { ...pl, added: false };
     await this.addVideoToPlaylist(pl.playlistId, videoId);
     return { ...pl, added: true };

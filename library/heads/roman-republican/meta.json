@@ -1,0 +1,11 @@
+{
+ "kind": "heads",
+ "id": "roman-republican",
+ "era": "ancient",
+ "region": "mediterranean",
+ "role": null,
+ "desc": "eight generic Roman citizens of the early Republic, 5th century BC: three older clean-shaven men with short grey hair, two younger men with short dark curly hair, one bearded middle-aged man, two women with hair pinned up under a cloth; a teal tunic collar where the neck shows",
+ "prompt": "Create ONE image, landscape 3:2. It is a HEADS SHEET for paper cut-out puppet animation: eight different HEADS, each in strict side profile facing RIGHT, each with a short neck at the bottom, same scale. eight generic Roman citizens of the early Republic, 5th century BC: three older clean-shaven men with short grey hair, two younger men with short dark curly hair, one bearded middle-aged man, two women with hair pinned up under a cloth; a teal tunic collar where the neck shows. Vary age, face shape, facial hair and expression; keep the same art style. Background: perfectly flat solid magenta #FF00FF everywhere, no shadows, no gradients, no texture on the background. Layout: an invisible 4 columns x 2 rows grid of equal cells; put exactly ONE item centred in each cell, fully inside its cell with wide magenta margins, items never touching. No grid lines, no labels, no text.\n\nArt style for every asset in this library: flat hand-painted paper cut-out illustration for a history explainer animation, clean simple shapes, subtle paper grain, thin dark-brown outline, soft muted natural colours, gentle painterly shading, consistent proportions (adult figure about 7 heads tall).\nCostumes are SYMBOLIC and GENERIC for the era and region: suggest the period through silhouette, headwear, garment cut and weapon type only. Do not copy any specific dynasty, uniform, museum piece or real insignia. No writing, no letters, no numbers, no real flags, no religious symbols, no real coats of arms. Emblems, if any, are simple invented geometric shapes.\nFaction colour rule: every cloth part that shows which side a character fights for (main tunic or robe panel, headband, sash, cape, shield paint, banner) is painted in solid TEAL #2A8C8C. Nothing else in the image uses teal or any blue-green: skin, hair, wood, leather, metal, straw stay natural colours.",
+ "drawn": "2026-10-14",
+ "colours": []
+}

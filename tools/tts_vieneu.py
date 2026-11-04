@@ -64,8 +64,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("narration")
     ap.add_argument("out")
-    ap.add_argument("--voice", default=None, help='VieNeu: "Quốc Tuấn" (default); kokoro: "am_fenrir" (default, the channel narrator)')
-    ap.add_argument("--engine", choices=["vieneu", "kokoro"], default="vieneu", help="kokoro = English (run with the old pipeline's .venv-kokoro python)")
+    ap.add_argument("--voice", default=None, help='VieNeu: "Quốc Tuấn" (default, a VieNeu preset voice name); kokoro: "am_fenrir" (default)')
+    ap.add_argument("--engine", choices=["vieneu", "kokoro"], default="vieneu", help="kokoro = English (run with the runtime/venv-kokoro python)")
     ap.add_argument("--only", default="", help="paragraph numbers (1-based) to re-read; others keep their files")
     a = ap.parse_args()
     import numpy as np
@@ -98,7 +98,7 @@ def main():
     else:
         import vieneu_local
 
-        a.voice = a.voice or "Quốc Tuấn"
+        a.voice = a.voice or "Quốc Tuấn"  # VieNeu preset voice name (matched against list_preset_voices)
         tts = vieneu_local.load()
         voices = [v[1] if isinstance(v, (list, tuple)) else v for v in tts.list_preset_voices()]
         voice = next((v for v in voices if a.voice in str(v)), None)

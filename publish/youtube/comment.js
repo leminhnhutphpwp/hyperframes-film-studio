@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 // ============================================================
-//  publish/youtube/comment.js — đăng bình luận ĐẦU của kênh lên video đã công khai
+//  publish/youtube/comment.js — posts the channel's FIRST comment on a public video
 //
-//  Chạy:  node publish/youtube/comment.js <thư-mục-project> [--lang=en] [--yes] [--force]
-//    - nội dung: <project>/publish/comment[.<lang>].txt (agent soạn, chủ kênh duyệt)
-//    - KHÔNG có --yes thì chỉ in ra xem trước, không đăng
-//    - video còn riêng tư thì YouTube từ chối ("has disabled comments") — công khai rồi mới đăng được
-//    - đã có bình luận của kênh trên video đó thì bỏ qua (--force để đăng thêm)
-//    - KHÔNG chèn link vào bình luận (luật kênh); link đăng ký nằm ở mô tả
-//    - GHIM là việc của chủ kênh: API YouTube không ghim được bình luận
-//    - chỉ chạy với token của đúng kênh; cần quyền youtube.force-ssl
+//  Run:  node publish/youtube/comment.js <project-folder> [--lang=en] [--yes] [--force]
+//    - text: <project>/publish/comment[.<lang>].txt (drafted by the agent, approved by the channel owner)
+//    - WITHOUT --yes it only prints a preview; nothing is posted
+//    - on a private video YouTube refuses ("has disabled comments") — make it public first
+//    - if the channel already has a comment on that video, skip (--force to post another)
+//    - NO links in the comment (channel rule); the subscribe link lives in the description
+//    - PINNING is up to the channel owner: the YouTube API cannot pin comments
+//    - only runs with the right channel's token; needs the youtube.force-ssl scope
 // ============================================================
 
 'use strict';
@@ -26,19 +26,19 @@ async function main() {
   const yes = a.has('yes');
   const force = a.has('force');
   const target = a.pos[0];
-  if (!target) throw new Error('Cách dùng: node publish/youtube/comment.js <thư-mục-project> [--lang=en] [--yes] [--force]');
+  if (!target) throw new Error('Usage: node publish/youtube/comment.js <project-folder> [--lang=en] [--yes] [--force]');
   const { lang, sfx } = studio.langOf();
   const { videoId, project, channel: ch } = studio.resolveVideo(target, { lang });
-  if (!project) throw new Error('Cần thư mục project (bình luận lấy từ publish/comment*.txt).');
+  if (!project) throw new Error('Needs a project folder (the comment comes from publish/comment*.txt).');
 
   const file = path.join(project, 'publish', `comment${sfx}.txt`);
-  if (!fs.existsSync(file)) throw new Error(`Chưa có ${studio.rel(file)} — soạn bình luận đầu (chủ kênh duyệt) rồi chạy lại.`);
+  if (!fs.existsSync(file)) throw new Error(`Missing ${studio.rel(file)} — write the first comment (approved by the channel owner) and run again.`);
   const text = fs.readFileSync(file, 'utf8').trim();
-  if (!text) throw new Error(`${studio.rel(file)} rỗng.`);
-  if (LINK_RE.test(text)) throw new Error(`${path.basename(file)} có link — luật kênh: bình luận không chèn link (link đăng ký để ở mô tả).`);
+  if (!text) throw new Error(`${studio.rel(file)} is empty.`);
+  if (LINK_RE.test(text)) throw new Error(`${path.basename(file)} contains a link — channel rule: no links in comments (the subscribe link goes in the description).`);
 
   console.log(`💬 ${studio.rel(project)} → https://www.youtube.com/watch?v=${videoId}\n${'─'.repeat(60)}\n${text}\n${'─'.repeat(60)}`);
-  if (!yes) { console.log('(xem trước — thêm --yes để đăng thật)'); return; }
+  if (!yes) { console.log('(preview — add --yes to post for real)'); return; }
 
   const yt = await openYouTube(ch);
   const api = yt.youtube;
@@ -47,17 +47,17 @@ async function main() {
       const mine = await api.commentThreads.list({ part: ['snippet'], videoId, maxResults: 50, textFormat: 'plainText' });
       const own = (mine.data.items || []).find((t) => t.snippet.topLevelComment.snippet.authorChannelId
         && t.snippet.topLevelComment.snippet.authorChannelId.value === yt.channel.id);
-      if (own) { console.log(`⏭  Kênh đã có bình luận trên ${videoId} — thêm --force nếu thật sự muốn đăng thêm.`); return; }
+      if (own) { console.log(`⏭  The channel already has a comment on ${videoId} — add --force if you really want to post another.`); return; }
     }
     const res = await api.commentThreads.insert({
       part: ['snippet'],
       requestBody: { snippet: { videoId, topLevelComment: { snippet: { textOriginal: text } } } },
     });
-    console.log(`✅ Đã đăng bình luận đầu lên ${videoId} (${res.data.id})`);
-    console.log('   Ghim giúp nhé — API YouTube không ghim bình luận được.');
+    console.log(`✅ Posted the first comment on ${videoId} (${res.data.id})`);
+    console.log('   Please pin it — the YouTube API cannot pin comments.');
   } catch (e) {
-    if (isScopeError(e)) throw new Error(`Token chưa có quyền bình luận (youtube.force-ssl). Chủ kênh đăng nhập lại: node publish/youtube/auth.js --channel=${ch.id}`);
-    if (/disabled comments/i.test(String(e.message))) throw new Error(`${videoId} đang tắt bình luận — video còn riêng tư thì YouTube chặn; công khai rồi chạy lại.`);
+    if (isScopeError(e)) throw new Error(`Token lacks the comment scope (youtube.force-ssl). Sign in again: node publish/youtube/auth.js --channel=${ch.id}`);
+    if (/disabled comments/i.test(String(e.message))) throw new Error(`${videoId} has comments disabled — YouTube blocks them on private videos; make it public and run again.`);
     throw e;
   }
 }

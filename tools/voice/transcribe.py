@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # ============================================================
-#  src/transcribe.py — STT (bóc băng) bằng faster-whisper
+#  tools/voice/transcribe.py — speech-to-text (transcription) with faster-whisper
 #
-#  Dùng để HỌC phong cách video mẫu: bóc lời đọc + mốc thời gian từng câu để
-#  đo nhịp/wording. KHÔNG nằm trong pipeline dựng video; chỉ là công cụ phân
-#  tích tư liệu tham chiếu (data/reference/<name>/).
+#  For STUDYING the style of reference videos: transcribe the narration with
+#  per-sentence timestamps to measure pacing and wording. NOT part of the video
+#  build pipeline; only a tool for analysing reference material.
 #
-#  Chạy trong venv:  runtime/venv-kokoro/bin/python tools/voice/transcribe.py <audio> [--model small] [--lang en]
-#  Xuất cạnh file audio:  <base>.transcript.txt · <base>.srt · <base>.segments.json
+#  Run in the venv:  runtime/venv-kokoro/bin/python tools/voice/transcribe.py <audio> [--model small] [--lang en]
+#  Writes next to the audio file:  <base>.transcript.txt · <base>.srt · <base>.segments.json
 # ============================================================
 import sys, os, json, argparse
 
@@ -23,14 +23,14 @@ def main():
     ap.add_argument("audio")
     ap.add_argument("--model", default=os.environ.get("WHISPER_MODEL", "small"))
     ap.add_argument("--lang", default="en")
-    ap.add_argument("--out", default=None, help="tiền tố file xuất (mặc định = cạnh audio)")
+    ap.add_argument("--out", default=None, help="output file prefix (default: next to the audio)")
     args = ap.parse_args()
 
     from faster_whisper import WhisperModel
 
     base = args.out or os.path.splitext(args.audio)[0]
     print(f"[transcribe] model={args.model} lang={args.lang} audio={args.audio}", flush=True)
-    # CPU + int8: nhẹ RAM, đủ nhanh cho bóc băng tư liệu.
+    # CPU + int8: light on RAM, fast enough for transcribing reference material.
     model = WhisperModel(args.model, device="cpu", compute_type="int8")
     segments, info = model.transcribe(
         args.audio, language=args.lang, vad_filter=True,
@@ -60,7 +60,7 @@ def main():
             "segments": segs,
         }, f, ensure_ascii=False, indent=2)
 
-    print(f"\n[transcribe] {len(segs)} câu · {round(info.duration,1)}s → {base}.transcript.txt / .srt / .segments.json", flush=True)
+    print(f"\n[transcribe] {len(segs)} segments · {round(info.duration,1)}s → {base}.transcript.txt / .srt / .segments.json", flush=True)
 
 if __name__ == "__main__":
     main()

@@ -1,121 +1,135 @@
-# Khuôn phim rối giấy (bản mới nhất)
+# Paper cut-out film template (latest)
 
-`shared/` là bộ dựng phim dùng cho **mọi phim mới**: engine rối giấy cộng thêm lớp điện ảnh `fx.js`.
-Phim đã đăng giữ nguyên mã cũ của chúng; khuôn này chỉ dùng từ phim sau trở đi.
+`shared/` is the film build kit for **every new film**: the paper-puppet engine plus the cinematic layer `fx.js`.
+Published films keep their old code; this template only applies from the next film on.
 
-Bắt đầu phim mới:
+Starting a new film:
 
 ```bash
-mkdir -p projects/<tên> && cp -r templates/film/shared projects/<tên>/shared
-# sửa shared/js/cast.js (nhân vật của phim), shared/map/spec.json (vùng bản đồ) rồi tools/map_render.py
+mkdir -p projects/<name> && cp -r templates/film/shared projects/<name>/shared
+# edit shared/js/cast.js (the film's characters) and shared/map/spec.json (the map region), then run tools/map_render.py
 ```
 
-`examples/` — chương "Ides tháng Ba" làm thử với đủ hiệu ứng (`ides-scenes.js`, `ides-chapter.json`) và hai tranh
-(`ides-dao`: 3 lớp, `ides-toga`: 1 lớp).
+`examples/` — a test chapter, "The Ides of March", using every effect (`ides-scenes.js`, `ides-chapter.json`), plus two
+tableaux (`ides-dao`: 3 layers, `ides-toga`: 1 layer).
 
-## Lớp điện ảnh — `shared/js/fx.js`
+## Cinematic layer — `shared/js/fx.js`
 
-Gọi trong hàm cảnh, mỗi khung (tính theo t, tua tới đâu cũng đúng):
+Call these inside a scene function, every frame (driven by t, so they are correct wherever you seek to):
 
-| Lệnh | Dùng khi |
+| Call | Use it for |
 |---|---|
-| `fx.grade("night" \| "dusk" \| "dawn" \| "storm" \| "fire" \| "gold" \| "cold" \| "blood" \| "memory" \| "tense", a)` | màu theo không khí cảnh |
-| `fx.particles("dust" \| "embers" \| "rain" \| "snow" \| "ash" \| "sparks" \| "petals" \| "smoke", t, a, {n, area, wind})` | bụi nắng, tàn lửa, mưa, hoa khải hoàn, khói cháy |
-| `fx.fog(t, a, {y})` | sương sông, sáng sớm, chiến trường |
-| `fx.glow([x, y], r, "#ff9a3c", a, t)` | ánh đuốc, lò lửa, đèn dầu — đặt nguồn ngoài mép khung nếu phông không có đuốc |
-| `fx.rays(t, a, {from, angle})` | tia nắng qua cửa sổ, đền đài |
-| `fx.lightning(t, [t1, t2])` | sét trong bão |
-| `fx.bars(a)` | viền đen 2.35:1 cho khoảnh khắc lớn |
-| `fx.focus(S, a)` | phông mờ khi camera đẩy vào cận cảnh (chapter_build tạo sẵn `<phông>.blur.jpg`) |
-| `fx.shake(camera, t, amp)` | rung khi va chạm, đại bác |
-| `fx.tableau(spec, t, a, b)` | tranh cận cảnh nhiều lớp, camera lướt có chiều sâu — hàm cảnh trả `null` |
+| `fx.grade("night" \| "dusk" \| "dawn" \| "storm" \| "fire" \| "gold" \| "cold" \| "blood" \| "memory" \| "tense", a)` | colour to match the mood of the scene |
+| `fx.particles("dust" \| "embers" \| "rain" \| "snow" \| "ash" \| "sparks" \| "petals" \| "smoke", t, a, {n, area, wind})` | sunlit dust, embers, rain, triumph petals, smoke from fires |
+| `fx.fog(t, a, {y})` | river mist, early morning, battlefields |
+| `fx.glow([x, y], r, "#ff9a3c", a, t)` | torchlight, a furnace, an oil lamp — put the source off-frame if the backdrop has no torch |
+| `fx.rays(t, a, {from, angle})` | sunbeams through a window or a temple |
+| `fx.lightning(t, [t1, t2])` | lightning in a storm |
+| `fx.bars(a)` | 2.35:1 letterbox bars for big moments |
+| `fx.focus(S, a)` | blurs the backdrop when the camera pushes in to a close shot (chapter_build pre-builds `<backdrop>.blur.jpg`) |
+| `fx.shake(camera, t, amp)` | shake on impacts and cannon fire |
+| `fx.tableau(spec, t, a, b)` | a layered close-up tableau with a parallax camera move — the scene function returns `null` |
 
-Chuyển cảnh: `export const TRANSITIONS = [{ t, kind: "ink" | "burn" | "paper" | "flash", d }]` trong `scenes.js`
-(thay cho `DIPS` mờ đen ở những chỗ cần).
+Transitions: `export const TRANSITIONS = [{ t, kind: "ink" | "burn" | "paper" | "flash", d }]` in `scenes.js`
+(use these instead of `DIPS` fades to black where it helps).
 
-Camera cận cảnh: đẩy `look()` từ z≈8.5 (toàn cảnh) xuống z≈4.5 (trung cảnh) vào người đang nói, kèm `fx.focus`.
-Đầu rối 270×380 px nên trung cảnh vẫn nét.
+Close-up camera: push `look()` from z≈8.5 (wide shot) to z≈4.5 (medium shot) on whoever is speaking, together with
+`fx.focus`. Puppet heads are 270×380 px, so medium shots stay sharp.
 
-## Tranh cận cảnh — `tools/tableau.py`
+## Close-up tableaux — `tools/tableau.py`
 
 ```bash
-.venv/bin/python -I tools/tableau.py projects/<tên>/tableaux/<id>/tableau.json
+.venv/bin/python -I tools/tableau.py projects/<name>/tableaux/<id>/tableau.json
 ```
 
-`tableau.json`: `light` (chung cho mọi lớp), `bg` (tấm nền, không người), `mid`/`fg` (nhân vật trên nền hồng → tách
-nền), hoặc `"flat": true` (một ảnh gồm cả người, không thị sai). Thêm `"tableaux": ["<id>"]` vào `chapter.json`.
-Kinh nghiệm: lớp tiền cảnh dễ bị AI tô tối phần giữa — xem lớp trên nền xanh trước khi dùng; cảnh một nhân vật lặng
-lẽ thì dùng `flat`. Không vẽ máu, vết thương; bạo lực chỉ gợi (dao giơ lên, ngã vào bóng tối).
+`tableau.json`: `light` (shared by every layer), `bg` (the background plate, no people), `mid`/`fg` (characters on a
+pink background, which is then removed), or `"flat": true` (one image that includes the people, no parallax). Add
+`"tableaux": ["<id>"]` to `chapter.json`.
+Lessons learned: the image model tends to darken the middle of the foreground layer — check the layer on a blue
+background before using it. For a quiet scene with a single character, use `flat`. Do not draw blood or wounds;
+only suggest violence (a raised knife, a fall into darkness).
 
-## Nhân vật và con vật vẽ nguyên hình
+## Characters and animals drawn as whole figures
 
-Rối ghép mảnh (đầu, thân, đùi… xoay quanh khớp) sửa mãi vẫn lòi lỗi cổ, chân, khớp. Cách ngành hoạt hình làm với
-những gì khớp không giả được là **thay hình**: vẽ nguyên hình cho mỗi tư thế, chiếu nối tiếp. mô hình ảnh vẽ một hình mẫu,
-rồi vẽ lại từng khung từ chính hình mẫu đó (sửa ảnh theo ảnh mẫu) nên giữ đúng một nhân vật.
+Jointed puppets (head, torso, thighs… rotating around joints) keep showing faults at the neck, legs and joints no
+matter how much you fix them. What animation does with movement that joints cannot fake is **replacement**: draw a
+whole figure for each pose and play them in sequence. The image model draws a reference figure, then redraws each
+frame from that same reference (image-to-image editing), so it stays the same character.
 
-| Loại | Dùng cho | anim.json `type` |
+| Kind | Used for | anim.json `type` |
 |---|---|---|
-| Con vật | ngựa, voi (đi, phi) — yên/bành và người rối ngồi trên lưng theo từng khung | `horse`, `elephant` |
-| Người | nhân vật chính và nhân vật cận cảnh: đứng, các khung đi, mọi tư thế kịch bản cần | `person` |
-| Người cưỡi ngựa | người và ngựa vẽ chung một hình (đi, phi) — không lỗi cổ, chân bàn đạp | `rider` |
+| Animal | horses, elephants (walk, gallop) — the saddle/howdah and the puppet riding it follow each frame | `horse`, `elephant` |
+| Person | main characters and close-up characters: standing, walk frames, every pose the script needs | `person` |
+| Rider | rider and horse drawn as one image (walk, gallop) — no neck or stirrup faults | `rider` |
 
 ```bash
-mkdir -p library/anims/<id> && $EDITOR library/anims/<id>/anim.json     # mẫu: library/anims/tuong-la-ma, …-ngua, ngua-chien
-.venv/bin/python -I tools/anim_frames.py library/anims/<id>              # vẽ hình mẫu rồi các khung (3 hình cùng lúc)
-.venv/bin/python -I tools/anim_frames.py --cut library/anims/<id>        # tách nền, cùng cỡ, cùng mặt đất → frames/
-.venv/bin/python -I tools/rigtest.py /tmp/x.png --anims <id>              # soi từng khung; --video 6 → /tmp/x.mp4
+mkdir -p library/anims/<id> && $EDITOR library/anims/<id>/anim.json     # model it on an existing anim.json (a general, a rider, a horse)
+.venv/bin/python -I tools/anim_frames.py library/anims/<id>              # draws the reference figure, then the frames (3 at a time)
+.venv/bin/python -I tools/anim_frames.py --cut library/anims/<id>        # removes the background, same size, same ground line → frames/
+.venv/bin/python -I tools/rigtest.py /tmp/x.png --anims <id>              # inspect every frame; --video 6 → /tmp/x.mp4
 ```
 
-Trong `chapter.json`: `"assets": ["anims/<id>", …]`. Trong cảnh:
-- con vật: `makeAnimMount(scene, "<id>@anim")` + `poseAnimMount(m, "walk" | "gallop", sải)`; người rối ngồi lên:
+In `chapter.json`: `"assets": ["anims/<id>", …]`. In a scene:
+- animal: `makeAnimMount(scene, "<id>@anim")` + `poseAnimMount(m, "walk" | "gallop", stride)`; to seat a puppet on it:
   `rideOn(m, figure)` + `applyPose(figure, RIDING)`.
-- người, người cưỡi: `makeAnimPerson(scene, "<id>@anim")` + `poseAnimPerson(p, "walk", sải)` hoặc
-  `poseAnimPerson(p, "act3")`; quay mặt: `p.root.scale.x = -1`.
-- Nhịp: đi ~6–8 hình/giây (người ~1 sải/giây, ngựa ~0,9, voi ~0,6), phi ~2 sải/giây.
+- person or rider: `makeAnimPerson(scene, "<id>@anim")` + `poseAnimPerson(p, "walk", stride)` or
+  `poseAnimPerson(p, "act3")`; to face the other way: `p.root.scale.x = -1`.
+- Timing: walking ~6–8 frames per second (a person ~1 stride per second, a horse ~0.9, an elephant ~0.6), galloping
+  ~2 strides per second.
 
-**Kế thừa, không vẽ lại:** con vật và vai phụ (đám đông, lính, dân) dùng lại giữa các phim. Mỗi loại áo chỉ một
-người được vẽ khung đi và các dáng; những người cùng áo chỉ có hình đứng (mặt riêng) và mượn khung của người đó
-(`tools/cast_draw.py` LEADS, `chapter_build.py`). Chỉ vai chính có tên của mỗi phim mới vẽ trọn bộ.
+**Reuse, don't redraw:** animals and minor roles (crowds, soldiers, civilians) are reused across films. For each
+costume, only one person gets walk frames and poses drawn. Others in the same costume only get a standing image (their
+own face) and borrow that person's frames (`tools/cast_draw.py` LEADS, `chapter_build.py`). Only each film's named
+main characters get a full set.
 
-Thiếu tư thế thì thêm một dòng vào `cycles` trong anim.json và chạy lại (chỉ vẽ hình còn thiếu). Rối ghép mảnh vẫn
-dùng được cho đám đông, lính ở xa.
+If a pose is missing, add a line to `cycles` in anim.json and run it again (it only draws the missing images). Jointed
+puppets are still fine for crowds and distant soldiers.
 
-## Rig rối — kiểm tra nhanh bằng canvas, không render
+## Puppet rig — quick check on a canvas, no render
 
 ```bash
-.venv/bin/python -I tools/rigtest.py /tmp/rig.png                               # 5 nhân vật × 14 tư thế, ~8 s
-.venv/bin/python -I tools/rigtest.py /tmp/rig.png <kit>[:<bộ đầu>:<headN>] --poses "đứng,ngồi,quỳ" --marks
-.venv/bin/python -I tools/rigtest.py /tmp/all.png --all --per 6                  # cả thư viện, ~20 s
-.venv/bin/python -I tools/rigtest.py /tmp/thu.png --mounts                         # ngựa, voi: đứng, 4 pha bước, phi
-.venv/bin/python -I tools/rigtest.py /tmp/thu.png --mounts voi-chien --rider <kit>  # một con, người cưỡi khác
+.venv/bin/python -I tools/rigtest.py /tmp/rig.png                               # 5 characters × 14 poses, ~8 s
+.venv/bin/python -I tools/rigtest.py /tmp/rig.png <kit>[:<head-set>:<headN>] --poses "stand,sit,kneel" --marks
+.venv/bin/python -I tools/rigtest.py /tmp/all.png --all --per 6                  # the whole library, ~20 s
+.venv/bin/python -I tools/rigtest.py /tmp/mounts.png --mounts                      # horses, elephants: standing, 4 walk phases, gallop
+.venv/bin/python -I tools/rigtest.py /tmp/mounts.png --mounts <mount> --rider <kit>  # one animal with a different rider
 ```
 
-Sửa engine/khớp xong thì chạy cái này, đừng render cả chương. Làm phim mới: chạy trước cho **mọi hành động phim dùng**
-(đi, ngồi, quỳ, cưỡi, con vật) với đúng bộ đồ của phim. `--marks`: chấm đỏ cổ, xanh dương vai/hông, xanh lá
-khuỷu/gối. Rig:
-- **Cổ** — đầu xoay ở gáy (`neck`, `neckLen` trong `parts.json`, đo trên ảnh: `asset.py` tự đo khi cắt; thư viện cũ
-  đã chạy `repivot`), cổ lún vào hốc cổ áo (`neckSocket`) theo độ dài cổ của từng hình; chỉnh chung ở `NECK`.
-- **Tiếp đất** — hông nâng theo điểm thấp nhất: đế giày, mũi chân (bàn chân vẽ trên mảnh cẳng chân) hay đầu gối.
-- **Ngồi** (`SEATED`, `sit`) — đặt `root.position.y` = mặt ghế (hoặc `seatH`) trước `applyPose`: chân tự gập cho bàn
-  chân chạm đất; ngai quá cao thì chân buông.
-- **Quỳ** (`KNEEL`, `kneel`) — chân trước giữ góc, chân sau tự tính cho đầu gối và mũi chân cùng chạm đất.
-- **Giáo, súng, gậy dựng đứng** — đuôi không bao giờ xuyên đất (chống đất; trên ngựa thì tựa ngang bàn đạp); tay buông
-  thì cầm hơi ra trước cho cán khỏi che mặt.
-- **Khiên** — ngồi hoặc quỳ thì đặt xuống (`keepShield: true` để giữ).
-- **Viền hồng** ở mép mảnh (đầu gối, khuỷu) được khử trong shader.
-- **Ngựa, voi** — mỗi khung thân con vật hạ/nâng cho móng thấp nhất chạm đất (trước đây chân vung là cả con lơ lửng);
-  chỉ khi phi (`amp > 1`) mới nảy khỏi đất. Người cưỡi voi ngồi sau thành bành (chân khuất, ngực trên thành).
+`--poses` takes the pose names defined in `templates/film/rigtest/index.html` (for example `stand`, `sit`, `kneel`, `bow`,
+`fallen`).
 
-## Thêm từ các phim gần đây
+After changing the engine or the joints, run this instead of rendering a whole chapter. For a new film, run it first
+for **every action the film uses** (walk, sit, kneel, ride, animals) with the film's own costumes. `--marks`: red dots
+for the neck, blue for shoulders/hips, green for elbows/knees. The rig:
+- **Neck** — the head rotates at the nape (`neck`, `neckLen` in `parts.json`, measured on the image: `asset.py`
+  measures it when cutting; the older library has been through `repivot`). The neck sinks into the collar socket
+  (`neckSocket`) according to each figure's neck length; adjust globally with `NECK`.
+- **Ground contact** — the hips rise to follow the lowest point: the sole, the toe (the foot is drawn on the shin
+  piece) or the knee.
+- **Sitting** (`SEATED`, `sit`) — set `root.position.y` to the seat height (or `seatH`) before `applyPose`: the legs
+  bend on their own so the feet touch the ground; on a throne that is too high, the legs hang.
+- **Kneeling** (`KNEEL`, `kneel`) — the front leg keeps its angle; the back leg is solved so the knee and toes both
+  touch the ground.
+- **Upright spears, guns, staffs** — the butt never goes through the ground (it rests on the ground; on horseback it
+  rests level with the stirrup). With the arm hanging, the hand holds it slightly forward so the shaft does not cover
+  the face.
+- **Shields** — put down when sitting or kneeling (`keepShield: true` keeps them).
+- **Pink fringes** at piece edges (knees, elbows) are removed in the shader.
+- **Horses, elephants** — each frame the animal's body is lowered or raised so the lowest hoof touches the ground
+  (previously a swinging leg made the whole animal float). Only a gallop (`amp > 1`) lifts it off the ground. An
+  elephant rider sits behind the howdah wall (legs hidden, chest above the wall).
 
-- `chapter.json` của chương: `"hold": giây` — cắt sang chương sau đúng chừng ấy giây sau câu cuối (thay vì giữa khoảng
-  lặng), để chỗ cho một clip như intro kênh. Mốc `at`/`until` nhận `[n, "end+0.3"]` (giây sau khi câu n đọc xong) —
-  đúng cho mọi bản ngôn ngữ.
-- Clip `"overlay": true`: WebM có nền trong suốt (`hyperframes render --format webm`) đè lên hình thay vì thay hình —
-  dùng cho thẻ thông tin đầu phim. Clip theo ngôn ngữ: `clips/<tên>.<lang>.webm`.
-- Chuyển cảnh mực: bộ lọc SVG dùng `color-interpolation-filters="sRGB"` (trước đây mực ngả xanh lá).
-- Phông vẽ mới có nền đất cao: góc máy mặc định chỉ thấy đất → dùng phông nhỏ, gần, thấp hơn
-  (`stage(id, { width: 18, height: 12, z: -5, y: 2.6 })`, xem `projects/my-channel/hannibal/shared/js/stage.js`); soát
-  bằng `tools/frames.py` trước khi render.
-- Tư liệu thật (ảnh có ghi nguồn) và bàn cờ trận nhìn từ trên: `projects/my-channel/hannibal/shared/js/han.js`
-  (`archival`, `board`, `block`, `track`). Nhạc nền đàn oud: `tools/synth_audio.py --bed oud`.
+## Added in recent films
+
+- A chapter's `chapter.json` can set `"hold": seconds` — cut to the next chapter exactly that many seconds after the
+  last sentence (instead of in the middle of the silence), to leave room for a clip such as a channel intro. `at`/`until`
+  cues accept `[n, "end+0.3"]` (seconds after sentence n finishes) — correct for every language version.
+- Clips with `"overlay": true`: a WebM with a transparent background (`hyperframes render --format webm`) is laid over
+  the picture instead of replacing it — used for info cards at the start of a film. Per-language clips:
+  `clips/<name>.<lang>.webm`.
+- Ink transitions: the SVG filter uses `color-interpolation-filters="sRGB"` (before, the ink turned greenish).
+- Newly painted backdrops with high ground: the default camera angle only sees ground → use a smaller, closer, lower
+  backdrop (`stage(id, { width: 18, height: 12, z: -5, y: 2.6 })`, see `projects/my-channel/hannibal/shared/js/stage.js`);
+  check with `tools/frames.py` before rendering.
+- Real archival material (credited images) and a top-down battle board: `projects/my-channel/hannibal/shared/js/han.js`
+  (`archival`, `board`, `block`, `track`). An oud music bed: `tools/synth_audio.py --bed oud`.

@@ -1,11 +1,12 @@
-"""Fast puppet rig check: draw figures × poses (stand, walk, arms up, point, sit, kneel, bow, look up, fallen) on one
+"""Fast puppet rig check: draw figures × poses (stand, walk, arms up, point, sit, kneel, bow, look up, fallen, ride) on one
 canvas and screenshot it — seconds, no HyperFrames render. Joint markers with --marks (red neck, blue shoulder/hip,
 green elbow/knee).
 
   .venv/bin/python -I tools/rigtest.py <out.png> [kit[:heads[:headN]] ...] [--marks] [--all]
 
-Figures default to a spread of library kits (each with its own head); --all checks every kit, five per sheet
-(out-1.png, out-2.png, …). Uses templates/film/shared (the engine new films are built on) and library/ as it is.
+Figures default to a spread of starter-library kits (each with its own head); --all checks every kit, five per sheet
+(out-1.png, out-2.png, …). The "ride" pose uses the first mount in library/mounts and is skipped when there is none.
+Uses templates/film/shared (the engine new films are built on) and library/ as it is.
 """
 import argparse
 import functools
@@ -13,6 +14,7 @@ import glob
 import http.server
 import json
 import os
+import sys
 import threading
 from pathlib import Path
 
@@ -20,8 +22,10 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
 PAGE = ROOT / "templates/film/rigtest"
-DEFAULT = ["la-ma-cuoi-cong-hoa-tuong:chinh-khach-la-ma:head1", "nguyen-lao:chinh-khach-la-ma:head4", "cong-dan-la-ma:nguoi-la-ma-cong-hoa:head2",
-           "la-ma-cuoi-cong-hoa-le-duong", "thay-boi-la-ma"]
+# starter-library examples (library/kits, library/heads): kit[:heads[:headN]]
+DEFAULT = ["roman-senator:roman-statesman:head1", "roman-senator:roman-statesman:head4", "roman-citizen:roman-republican:head2",
+           "roman-lictor", "roman-soothsayer"]
+RIDER = "roman-senator:roman-statesman:head1"  # starter-library example rider for --mounts / --anims
 PER_SHEET = 5
 
 
@@ -48,18 +52,26 @@ def entry(kind, aid, colour=None):
 COLOUR = {"kit": None, "head": None}
 
 
-def sheet(specs, marks, poses, mount="ngua-co-dai"):
+def first_mount():
+    """The first mount in library/mounts, or None (the starter library ships without mounts)."""
+    found = sorted(p.parent.parent.name for p in (ROOT / "library/mounts").glob("*/parts/parts.json"))
+    return found[0] if found else None
+
+
+def sheet(specs, marks, poses, mount=None):
     lib, figs = {}, []
-    me = entry("mounts", mount)
-    me["type"] = "elephant" if "elephant" in json.loads((ROOT / "library/mounts" / mount / "meta.json").read_text())["desc"].lower() else "horse"
-    lib[f"{mount}@base"] = me
+    mount = mount or first_mount()
+    if mount:
+        me = entry("mounts", mount)
+        me["type"] = "elephant" if "elephant" in json.loads((ROOT / "library/mounts" / mount / "meta.json").read_text())["desc"].lower() else "horse"
+        lib[f"{mount}@base"] = me
     for s in specs:
         kit, heads, head = (s.split(":") + [None, None])[:3]
         lib[f"{kit}@base"] = entry("kits", kit, COLOUR["kit"])
         if heads:
             lib[f"{heads}@base"] = entry("heads", heads, COLOUR["head"])
         figs.append({"kit": f"{kit}@base", "heads": f"{heads}@base" if heads else None, "head": head or "head1", "label": s})
-    (PAGE / "lib.js").write_text(f"window.LIB = {json.dumps(lib)};\nwindow.RIG = {json.dumps({'figures': figs, 'marks': marks, 'poses': poses or None, 'mount': f'{mount}@base'})};\n")
+    (PAGE / "lib.js").write_text(f"window.LIB = {json.dumps(lib)};\nwindow.RIG = {json.dumps({'figures': figs, 'marks': marks, 'poses': poses or None, 'mount': f'{mount}@base' if mount else None})};\n")
 
 
 def mount_sheet(mounts, rider, marks, poses=None):
@@ -103,9 +115,9 @@ def main():
     ap.add_argument("--mounts", nargs="?", const="all", default="", help="animals instead of people: all, or ids comma-separated")
     ap.add_argument("--anims", nargs="?", const="all", default="", help="drawn animals (library/anims): all, or ids comma-separated")
     ap.add_argument("--video", type=float, default=0, help="with --anims: seconds of a motion check video (out.mp4)")
-    ap.add_argument("--rider", default="la-ma-cuoi-cong-hoa-tuong:chinh-khach-la-ma:head1")
+    ap.add_argument("--rider", default=RIDER, help="kit[:heads[:headN]] riding the mounts / drawn animals")
     ap.add_argument("--per", type=int, default=PER_SHEET, help="figures per sheet (fewer = bigger)")
-    ap.add_argument("--poses", default="", help="only these poses, comma-separated (e.g. đứng,ngồi,quỳ) — bigger cells")
+    ap.add_argument("--poses", default="", help="only these poses, comma-separated (e.g. stand,sit,kneel) — bigger cells")
     a = ap.parse_args()
     COLOUR["kit"], COLOUR["head"] = a.colour, a.headcolour
     specs = sorted(p.parent.parent.name for p in (ROOT / "library/kits").glob("*/parts/parts.json")) if a.all else (a.figures or DEFAULT)
@@ -115,6 +127,8 @@ def main():
     if a.mounts:
         specs = sorted(p.parent.parent.name for p in (ROOT / "library/mounts").glob("*/parts/parts.json")) if a.mounts == "all" else a.mounts.split(",")
         a.per = min(a.per, 4)
+    if not specs:
+        sys.exit("nothing to draw: no matching assets in library/ (the starter library has no mounts or anims)")
     groups = [specs[i : i + a.per] for i in range(0, len(specs), a.per)]
 
     class Quiet(http.server.SimpleHTTPRequestHandler):

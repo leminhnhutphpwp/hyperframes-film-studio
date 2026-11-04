@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 // ============================================================
-//  publish/facebook/photo.js — đăng BÀI CÓ ẢNH lên fanpage + bình luận link YouTube
+//  publish/facebook/photo.js — posts a PHOTO post to the fanpage + a YouTube link comment
 //
-//  Chạy:  node publish/facebook/photo.js <thư-mục-project>                         # kiểm tra + xem trước (không đăng gì)
-//         node publish/facebook/photo.js <thư-mục-project> --yes                   # đăng (chỉ khi chủ kênh bảo đăng)
-//         node publish/facebook/photo.js <thư-mục-project> --comment-only [--yes]  # gửi bình luận link còn thiếu
-//         (--again để đăng lại bài đã có)
+//  Run:  node publish/facebook/photo.js <project-folder>                         # check + preview (posts nothing)
+//        node publish/facebook/photo.js <project-folder> --yes                   # post (only when the channel owner says so)
+//        node publish/facebook/photo.js <project-folder> --comment-only [--yes]  # send a missing link comment
+//        (--again to post again when a post already exists)
 //
-//  Đọc <project>/publish/: facebook_photo.txt (nội dung; phần sau "---" là bình luận đầu), facebook_photo.jpg
-//  (không có thì thumbnail.jpg), youtube.json (videoId để kiểm link). Link để ở bình luận (Facebook đẩy bài có
-//  link yếu hơn). Kiểm tra chữ (lib/facebook-check.js checkText): có nội dung, không link trong bài, ≤ 3 hashtag
-//  không dấu, link đúng tập, video YouTube đang công khai. Một mục ✗ là dừng.
-//  Ghi publish/facebook.json → photo: { postId, photoId, url, commentId, postedAt }.
-//  Nhãn AI: API không bật được — chủ kênh tự gắn trên web.
+//  Reads <project>/publish/: facebook_photo.txt (text; the part after "---" is the first comment), facebook_photo.jpg
+//  (falls back to thumbnail.jpg), youtube.json (videoId to check the link). The link goes in the comment (Facebook ranks posts
+//  with links lower). Text checks (lib/facebook-check.js checkText): body text, no link in the post, ≤ 3 hashtags
+//  without diacritics, link to the right episode, YouTube video is public. Any ✗ stops the run.
+//  Writes publish/facebook.json → photo: { postId, photoId, url, commentId, postedAt }.
+//  AI label: the API cannot set it — the channel owner adds it on the web.
 // ============================================================
 
 'use strict';
@@ -28,7 +28,7 @@ const { args, fail } = require('../lib/cli');
 async function main() {
   const a = args();
   const target = a.pos[0];
-  if (!target) throw new Error('Cách dùng: node publish/facebook/photo.js <thư-mục-project> [--yes] [--comment-only] [--again]');
+  if (!target) throw new Error('Usage: node publish/facebook/photo.js <project-folder> [--yes] [--comment-only] [--again]');
   const yes = a.has('yes');
   const P = open(target);
   const post = readPost(path.join(P.pub, 'facebook_photo.txt'));
@@ -36,28 +36,28 @@ async function main() {
   const done = P.state.photo;
 
   if (a.has('comment-only')) {
-    if (!done || !done.postId) throw new Error('Project này chưa có bài ảnh');
-    if (done.commentId) { console.log(`Đã có bình luận ${done.commentId}`); return; }
-    if (!post.comment) throw new Error('facebook_photo.txt chưa có bình luận (phần sau ---)');
-    if (!yes) { console.log(`Sẽ bình luận vào ${done.postId}:\n${post.comment}\n(thêm --yes để gửi)`); return; }
+    if (!done || !done.postId) throw new Error('This project has no photo post yet');
+    if (done.commentId) { console.log(`Comment already exists: ${done.commentId}`); return; }
+    if (!post.comment) throw new Error('facebook_photo.txt has no comment (the part after ---)');
+    if (!yes) { console.log(`Will comment on ${done.postId}:\n${post.comment}\n(add --yes to send)`); return; }
     done.commentId = (await FB.comment(done.postId, tok.access_token, post.comment)).id;
     P.save();
-    console.log(`✅ Đã bình luận ${done.commentId}`);
+    console.log(`✅ Commented ${done.commentId}`);
     return;
   }
-  if (done && done.postId && !a.has('again')) { console.log(`Project này đã có bài ảnh: ${done.url || done.postId} (--again để đăng lại)`); return; }
+  if (done && done.postId && !a.has('again')) { console.log(`This project already has a photo post: ${done.url || done.postId} (--again to post again)`); return; }
 
   const own = path.join(P.pub, 'facebook_photo.jpg');
   const img = fs.existsSync(own) ? own : path.join(P.pub, 'thumbnail.jpg');
-  if (!fs.existsSync(img)) throw new Error(`Không có ảnh: cần ${studio.rel(own)} hoặc publish/thumbnail.jpg`);
+  if (!fs.existsSync(img)) throw new Error(`No image: needs ${studio.rel(own)} or publish/thumbnail.jpg`);
   const checks = checkText({ state: { videoId: P.youtubeId }, post, ytStatus: await youtubeStatus(P.ch, P.youtubeId) });
   const mb = fs.statSync(img).size / 1e6;
-  checks.push({ ok: /\.jpe?g$/i.test(img) && mb <= 4, item: 'Ảnh JPEG ≤ 4 MB', detail: `${studio.rel(img)} · ${mb.toFixed(1)} MB` });
-  console.log(`\n🖼  Bài ảnh fanpage ${tok.pageName} — ${studio.rel(P.project)}`);
+  checks.push({ ok: /\.jpe?g$/i.test(img) && mb <= 4, item: 'JPEG image ≤ 4 MB', detail: `${studio.rel(img)} · ${mb.toFixed(1)} MB` });
+  console.log(`\n🖼  Fanpage photo post ${tok.pageName} — ${studio.rel(P.project)}`);
   for (const c of checks) console.log(`   ${c.ok ? '✓' : '✗'} ${c.item}: ${c.detail}`);
-  console.log(`\n   Nội dung:\n   ${post.description.replace(/\n/g, '\n   ')}\n   Bình luận đầu:\n   ${post.comment}`);
-  if (checks.some((c) => !c.ok)) throw new Error('Có mục ✗ — sửa rồi chạy lại, không đăng');
-  if (!yes) { console.log('\n(Xem trước — chưa đăng. Chủ kênh bảo đăng thì thêm --yes.)'); return; }
+  console.log(`\n   Text:\n   ${post.description.replace(/\n/g, '\n   ')}\n   First comment:\n   ${post.comment}`);
+  if (checks.some((c) => !c.ok)) throw new Error('Some checks failed (✗) — fix them and run again; nothing posted');
+  if (!yes) { console.log('\n(Preview — not posted. Add --yes when the channel owner says to post.)'); return; }
 
   const r = await FB.uploadPhoto({ pageId: tok.pageId, token: tok.access_token, file: img, message: post.description });
   const postId = r.post_id || `${tok.pageId}_${r.id}`;
@@ -65,10 +65,10 @@ async function main() {
   P.save();
   try {
     if (post.comment) P.state.photo.commentId = (await FB.comment(postId, tok.access_token, post.comment)).id;
-  } catch (e) { console.log(`⚠️  Bình luận link lỗi: ${e.message} (chạy lại --comment-only --yes)`); }
+  } catch (e) { console.log(`⚠️  Link comment failed: ${e.message} (rerun with --comment-only --yes)`); }
   P.save();
-  console.log(`\n✅ Đã đăng bài ảnh: ${P.state.photo.url}${P.state.photo.commentId ? ' + bình luận link' : ''}`);
-  console.log('   Nhớ gắn nhãn "nội dung AI" trên web nếu muốn (API không bật được).');
+  console.log(`\n✅ Posted the photo post: ${P.state.photo.url}${P.state.photo.commentId ? ' + link comment' : ''}`);
+  console.log('   Remember to add the "AI content" label on the web if wanted (the API cannot set it).');
 }
 
 main().catch(fail);

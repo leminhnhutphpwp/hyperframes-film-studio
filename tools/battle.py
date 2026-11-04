@@ -20,7 +20,7 @@ TEMPLATE = ROOT / "templates" / "battle"
 
 def weapon_class(meta):
     text = (meta.get("desc") or "").lower()
-    if meta.get("role") == "cung-thu":
+    if meta.get("role") == "archer":
         return "crossbow" if "crossbow" in text else "bow"
     if re.search(r"\bmusket\b", text):  # flintlock / matchlock: held like a pike, fires volleys (battle.json "fire")
         return "musket"

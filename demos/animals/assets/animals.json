@@ -1,0 +1,59 @@
+{
+ "elephant": {
+  "w": 800,
+  "h": 550,
+  "ground": 530,
+  "cycles": {
+   "walk": [
+    "walk1",
+    "walk2",
+    "walk3",
+    "walk4",
+    "walk5",
+    "walk6"
+   ]
+  }
+ },
+ "war-horse": {
+  "w": 800,
+  "h": 550,
+  "ground": 530,
+  "cycles": {
+   "walk": [
+    "walk1",
+    "walk2",
+    "walk3",
+    "walk4",
+    "walk5",
+    "walk6"
+   ],
+   "gallop": [
+    "gallop1",
+    "gallop2",
+    "gallop3",
+    "gallop4"
+   ]
+  }
+ },
+ "steppe-horse": {
+  "w": 800,
+  "h": 550,
+  "ground": 530,
+  "cycles": {
+   "walk": [
+    "walk1",
+    "walk2",
+    "walk3",
+    "walk4",
+    "walk5",
+    "walk6"
+   ],
+   "gallop": [
+    "gallop1",
+    "gallop2",
+    "gallop3",
+    "gallop4"
+   ]
+  }
+ }
+}

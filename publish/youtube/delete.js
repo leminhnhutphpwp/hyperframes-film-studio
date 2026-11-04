@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 // ============================================================
-//  publish/youtube/delete.js — XÓA HẲN một video khỏi YouTube (không hoàn tác được)
+//  publish/youtube/delete.js — PERMANENTLY deletes a video from YouTube (cannot be undone)
 //
-//  Chạy:  node publish/youtube/delete.js <thư-mục-project | videoId --channel=<kênh>> [--lang=en] --yes
-//    - KHÔNG có --yes thì chỉ in ra video sẽ bị xóa, không xóa
-//    - chỉ xóa video thuộc đúng kênh (token phải khớp channels/<kênh>/channel.js channelId)
-//    - xóa xong: bản ghi đăng của project đổi tên thành youtube[.<lang>].deleted-<ngày>.json (để upload lại được,
-//      vẫn còn dấu vết) và xóa channels/<kênh>/published/<videoId>.json
-//    - tốn 50 đơn vị hạn mức
+//  Run:  node publish/youtube/delete.js <project-folder | videoId --channel=<channel>> [--lang=en] --yes
+//    - WITHOUT --yes it only prints the video that would be deleted; nothing is deleted
+//    - only deletes videos of the right channel (token must match channelId in channels/<channel>/channel.js)
+//    - afterwards: the project's upload record is renamed to youtube[.<lang>].deleted-<date>.json (so it can be
+//      re-uploaded while keeping a trace) and channels/<channel>/published/<videoId>.json is deleted
+//    - costs 50 quota units
 // ============================================================
 
 'use strict';
@@ -20,7 +20,7 @@ async function main() {
   const a = args();
   const yes = a.has('yes');
   const target = a.pos[0];
-  if (!target) throw new Error('Dùng: delete.js <thư-mục-project | videoId --channel=<kênh>> [--lang=en] --yes');
+  if (!target) throw new Error('Usage: delete.js <project-folder | videoId --channel=<channel>> [--lang=en] --yes');
   const { lang } = studio.langOf();
   const { videoId, project, channel: ch } = studio.resolveVideo(target, { lang });
 
@@ -28,19 +28,19 @@ async function main() {
   const res = await yt.youtube.videos.list({ part: ['snippet', 'status'], id: [videoId] });
   const v = (res.data.items || [])[0];
   if (!v) {
-    console.log(`Video ${videoId} không còn trên YouTube (có thể đã xóa trước đó).`);
+    console.log(`Video ${videoId} is no longer on YouTube (it may have been deleted already).`);
   } else {
-    if (v.snippet.channelId !== yt.channel.id) throw new Error(`Video ${videoId} không thuộc kênh ${yt.channel.id} — từ chối xóa.`);
-    console.log(`Sẽ xóa: ${videoId} "${v.snippet.title}" (${v.status.privacyStatus})`);
+    if (v.snippet.channelId !== yt.channel.id) throw new Error(`Video ${videoId} does not belong to channel ${yt.channel.id} — refusing to delete.`);
+    console.log(`Will delete: ${videoId} "${v.snippet.title}" (${v.status.privacyStatus})`);
   }
   const rec = publishedPath(ch, videoId);
   const projRec = project && studio.uploadRecord(project, lang);
-  console.log(`  bản ghi sẽ dọn: ${[fs.existsSync(rec) && studio.rel(rec), projRec && fs.existsSync(projRec) && studio.rel(projRec)].filter(Boolean).join(', ') || '(không có)'}`);
-  if (!yes) { console.log('Chưa xóa gì (thiếu --yes).'); return; }
+  console.log(`  records to clean up: ${[fs.existsSync(rec) && studio.rel(rec), projRec && fs.existsSync(projRec) && studio.rel(projRec)].filter(Boolean).join(', ') || '(none)'}`);
+  if (!yes) { console.log('Nothing deleted (missing --yes).'); return; }
 
   if (v) {
     await yt.youtube.videos.delete({ id: videoId });
-    console.log(`✅ Đã xóa ${videoId} khỏi YouTube`);
+    console.log(`✅ Deleted ${videoId} from YouTube`);
   }
   if (projRec && fs.existsSync(projRec)) {
     const cur = studio.readJson(projRec);
@@ -50,7 +50,7 @@ async function main() {
       console.log(`   ${studio.rel(projRec)} → ${studio.rel(to)}`);
     }
   }
-  if (fs.existsSync(rec)) { fs.unlinkSync(rec); console.log(`   đã xóa ${studio.rel(rec)}`); }
+  if (fs.existsSync(rec)) { fs.unlinkSync(rec); console.log(`   deleted ${studio.rel(rec)}`); }
 }
 
 main().catch(fail);

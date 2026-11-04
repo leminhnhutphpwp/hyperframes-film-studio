@@ -10,7 +10,10 @@ export const LINES = window.LINES;
 export const at = (n) => LINES[n].t;
 export const end = (n) => LINES[n].t + LINES[n].d;
 // when the voice reaches a word: its position in the line's text, scaled to the line's duration
+// cue(n, word): when `word` is said in narration line n (found in the line's source text).
+// cue(n, 0.4): 40% of the way through line n — use this when the scene shouldn't depend on the wording.
 export const cue = (n, word) => {
+  if (typeof word === "number") return LINES[n].t + LINES[n].d * word;
   const i = LINES[n].vi.indexOf(word);
   if (i < 0) throw new Error(`cue: "${word}" not in line ${n}`);
   return LINES[n].t + (LINES[n].d * i) / LINES[n].vi.length;
@@ -271,7 +274,7 @@ function equip(f, opts = {}) {
     f.armR.end.add(g);
   }
   // opts.carry: hold the shield cell (a ledger, a scroll, a money bag…) as a small object of that size in metres
-  if (!opts.carry && (kit.role === "dan-thuong" || opts.noShield || kit.weapon === "musket")) return; // workers carry no shield (the shield cell holds a basket, rope…)
+  if (!opts.carry && (kit.role === "civilian" || opts.noShield || kit.weapon === "musket")) return; // workers carry no shield (the shield cell holds a basket, rope…)
   const s = new THREE.Group();
   const sk = opts.carry ? opts.carry / Math.max(P.shield.h, P.shield.w) : Math.min(0.98, 0.78 * Math.max(1, P.shield.h / P.shield.w)) / P.shield.h;
   s.add(card(kit, "shield", [P.shield.w / 2, P.shield.h / 2], sk, -0.01));

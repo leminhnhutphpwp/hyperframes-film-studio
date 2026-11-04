@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Stickman: pure code animation</title>
+    <style>
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #f6f0e0; }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+      #stage { position: absolute; inset: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-width="1920" data-height="1080" data-duration="7">
+      <canvas id="stage" width="1920" height="1080"></canvas>
+    </div>
+    <script>
+      // No assets at all: two stick figures, a box and a ball, drawn every frame from joint angles.
+      // Lines "boil" 12 times a second like hand-drawn animation.
+      const W = 1920, H = 1080, DUR = 7, FLOOR = 860;
+      const ctx = document.getElementById("stage").getContext("2d");
+      const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+      const smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+      const lerp = (a, b, u) => a + (b - a) * u;
+      const seg = (t, a, b) => clamp((t - a) / (b - a));
+      const rand = (n) => { const s = Math.sin(n * 91.7 + 47.3) * 43758.5453; return s - Math.floor(s); };
+      let boil = 0; // changes 12×/s; feeds the line jitter
+
+      const INK = "#1d1b22";
+      function line(x1, y1, x2, y2, w = 9, c = INK) {
+        const j = (k) => (rand(boil * 13 + k + x1 * 0.01) - 0.5) * 3;
+        ctx.strokeStyle = c; ctx.lineWidth = w; ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x1 + j(1), y1 + j(2));
+        ctx.quadraticCurveTo((x1 + x2) / 2 + j(3) * 2, (y1 + y2) / 2 + j(4) * 2, x2 + j(5), y2 + j(6));
+        ctx.stroke();
+      }
+
+      // a figure: hip at (x, y), facing f (1 right, -1 left); angles in radians from straight down
+      const L = { torso: 120, thigh: 78, shin: 76, upper: 62, fore: 58, head: 30 };
+      function limb(x, y, a1, a2, l1, l2, f, col) {
+        const kx = x + Math.sin(a1) * l1 * f, ky = y + Math.cos(a1) * l1;
+        const ex = kx + Math.sin(a1 + a2) * l2 * f, ey = ky + Math.cos(a1 + a2) * l2;
+        line(x, y, kx, ky, 9, col); line(kx, ky, ex, ey, 9, col);
+        return [ex, ey];
+      }
+      function figure(p, col = INK) {
+        const { x, y, f = 1, lean = 0 } = p;
+        const sx = x + Math.sin(lean) * L.torso * f, sy = y - Math.cos(lean) * L.torso;
+        // back limbs first, a touch lighter
+        limb(x, y, p.legB[0], p.legB[1], L.thigh, L.shin, f, "#5a5560");
+        limb(sx, sy, p.armB[0], p.armB[1], L.upper, L.fore, f, "#5a5560");
+        line(x, y, sx, sy, 10, col);
+        const hx = sx + Math.sin(lean) * (L.head + 6) * f, hy = sy - Math.cos(lean) * (L.head + 6);
+        ctx.fillStyle = "#f6f0e0"; ctx.strokeStyle = col; ctx.lineWidth = 9;
+        ctx.beginPath(); ctx.arc(hx, hy, L.head, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // eye: shows which way it faces
+        ctx.fillStyle = col; ctx.beginPath(); ctx.arc(hx + 11 * f, hy - 4, 4.5, 0, Math.PI * 2); ctx.fill();
+        const foot = limb(x, y, p.legF[0], p.legF[1], L.thigh, L.shin, f, col);
+        limb(sx, sy, p.armF[0], p.armF[1], L.upper, L.fore, f, col);
+        return { foot, head: [hx, hy] };
+      }
+      const HIP = L.thigh + L.shin - 4; // hip height when standing
+      function runPose(x, ph, f = 1) {
+        const s = Math.sin(ph), c = Math.cos(ph);
+        return { x, y: FLOOR - HIP + Math.abs(c) * -14, f, lean: 0.25,
+          legF: [0.9 * s, -0.2 - Math.max(0, c) * 1.3], legB: [-0.9 * s, -0.2 - Math.max(0, -c) * 1.3],
+          armF: [-1.0 * s + 0.1, 1.5], armB: [1.0 * s + 0.1, 1.5] };
+      }
+      const stand = (x, f = 1, wave = 0) => ({ x, y: FLOOR - HIP, f, lean: 0,
+        legF: [0.12, 0], legB: [-0.12, 0], armF: [0.25 + wave, 0.3], armB: [-0.25, 0.3] });
+
+      function paper() {
+        ctx.fillStyle = "#f6f0e0"; ctx.fillRect(0, 0, W, H);
+        ctx.strokeStyle = "rgba(90,130,200,0.28)"; ctx.lineWidth = 2;
+        for (let y = 60; y < H; y += 56) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+        ctx.strokeStyle = "rgba(210,80,80,0.45)"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(150, 0); ctx.lineTo(150, H); ctx.stroke();
+      }
+      const floorLine = () => line(170, FLOOR + 4, 1760, FLOOR + 4, 6, "#3b3742");
+      function burst(x, y, text, u, col) {
+        if (u <= 0) return;
+        const r = 120 * smooth(u * 3) * (1 + 0.04 * Math.sin(u * 40));
+        ctx.save(); ctx.translate(x, y); ctx.rotate(-0.12);
+        ctx.fillStyle = col; ctx.strokeStyle = INK; ctx.lineWidth = 7;
+        ctx.beginPath();
+        for (let i = 0; i < 22; i++) { const a = (i / 22) * Math.PI * 2, rr = i % 2 ? r * 0.62 : r; ctx.lineTo(Math.cos(a) * rr * 1.5, Math.sin(a) * rr); }
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = INK; ctx.font = `900 ${Math.round(r * 0.62)}px 'Arial Black', Impact, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(text, 0, 4);
+        ctx.restore();
+      }
+      function speedLines(x, y, n, len, a) {
+        for (let i = 0; i < n; i++) line(x - len - rand(i) * 60, y - 60 + i * 26, x - 30 - rand(i + 5) * 30, y - 60 + i * 26, 5, `rgba(29,27,34,${0.5 * a})`);
+      }
+
+      function renderAt(t) {
+        t = clamp(t, 0, DUR);
+        boil = Math.floor(t * 12);
+        paper();
+        // zoom the action in: scene x 200…1680 fills the frame, the floor sits low
+        ctx.save();
+        ctx.translate(-200 * 1.3, 980 - FLOOR * 1.3);
+        ctx.scale(1.3, 1.3);
+        floorLine();
+        const BOX = 900, BALL0 = 1220, B = 1560;
+        // the box to jump over
+        line(BOX - 60, FLOOR, BOX - 60, FLOOR - 110, 8); line(BOX + 60, FLOOR, BOX + 60, FLOOR - 110, 8);
+        line(BOX - 60, FLOOR - 110, BOX + 60, FLOOR - 110, 8); line(BOX - 60, FLOOR - 110, BOX + 60, FLOOR, 4, "#5a5560");
+
+        // A: run 0–1.9 s, jump 1.9–2.6, run 2.6–3.25, kick at 3.3, then celebrate
+        let pa, ax;
+        if (t < 1.9) { ax = lerp(240, BOX - 190, t / 1.9); pa = runPose(ax, t * 11); }
+        else if (t < 2.6) {
+          const u = seg(t, 1.9, 2.6); ax = lerp(BOX - 190, BOX + 170, u);
+          pa = { x: ax, y: FLOOR - HIP - Math.sin(u * Math.PI) * 230, f: 1, lean: 0.35 - u * 0.4,
+            legF: [1.3 - u * 0.6, -1.6 + u * 1.2], legB: [0.6, -1.9 + u * 1.2], armF: [-2.4, 0.4], armB: [-2.0, 0.5] };
+        } else if (t < 3.25) { ax = lerp(BOX + 170, BALL0 - 95, seg(t, 2.6, 3.25)); pa = runPose(ax, t * 11); }
+        else if (t < 4.1) {
+          const k = smooth(seg(t, 3.2, 3.45)); ax = BALL0 - 95;
+          pa = { x: ax, y: FLOOR - HIP, f: 1, lean: -0.25 * k, legF: [lerp(0.2, -1.7, k) * -1, lerp(-0.6, -0.1, k)], legB: [-0.25, 0],
+            armF: [-0.4 - k, 0.6], armB: [1.2 * k, 0.4] };
+        } else {
+          const u = seg(t, 5.0, 5.5), hop = Math.abs(Math.sin(Math.max(0, t - 5.0) * 6)) * (t > 5 ? 70 : 0);
+          ax = lerp(BALL0 - 95, B - 230, smooth(seg(t, 4.1, 5.0)));
+          pa = t < 5.0 ? runPose(ax, t * 10) : { x: ax, y: FLOOR - HIP - hop, f: 1, lean: 0, legF: [0.2, -0.4 * (hop / 70)], legB: [-0.2, -0.4 * (hop / 70)], armF: [-2.7, 0.2], armB: [-2.3, 0.3] };
+        }
+        if (t > 0.3 && t < 1.9) speedLines(ax - 60, FLOOR - 190, 4, 120, 1);
+
+        // the ball: rests, flies after the kick (3.3 s) in an arc to B's head, drops after the header
+        let bx = BALL0, by = FLOOR - 26, spin = 0;
+        if (t >= 3.3 && t < 4.3) { const u = seg(t, 3.3, 4.3); bx = lerp(BALL0, B - 10, u); by = lerp(FLOOR - 26, FLOOR - 330, u) - Math.sin(u * Math.PI) * 260; spin = u * 14; }
+        else if (t >= 4.3) { const u = seg(t, 4.3, 5.4); bx = lerp(B - 10, W + 120, u); by = FLOOR - 330 - Math.sin(u * Math.PI) * 120 + u * u * 300; spin = 14 + u * 10; }
+        if (t >= 3.3 && t < 4.3) speedLines(bx, by + 40, 3, 90, 1 - seg(t, 3.3, 4.3));
+        ctx.save(); ctx.translate(bx, by); ctx.rotate(spin);
+        ctx.fillStyle = "#fff"; ctx.strokeStyle = INK; ctx.lineWidth = 7;
+        ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
+        for (let i = 0; i < 5; i++) { const a = i * 1.2566; line(Math.cos(a) * 9, Math.sin(a) * 9, Math.cos(a) * 24, Math.sin(a) * 24, 4); }
+        ctx.restore();
+
+        // B: waits, leaps for the header at 4.3 s, then celebrates
+        let pb;
+        if (t < 3.9) pb = stand(B, -1, t > 3.3 ? 0.8 : 0);
+        else if (t < 4.7) {
+          const u = seg(t, 3.9, 4.7);
+          pb = { x: B, y: FLOOR - HIP - Math.sin(u * Math.PI) * 200, f: -1, lean: -0.3 * Math.sin(u * Math.PI),
+            legF: [0.4, -1.2 * Math.sin(u * Math.PI)], legB: [-0.3, -1.4 * Math.sin(u * Math.PI)], armF: [-1.6, 0.6], armB: [-1.2, 0.6] };
+        } else {
+          const hop = t > 5 ? Math.abs(Math.sin((t - 5.0) * 6 + 1)) * 70 : 0;
+          pb = { x: B, y: FLOOR - HIP - hop, f: -1, lean: 0, legF: [0.2, -0.4 * hop / 70], legB: [-0.2, -0.4 * hop / 70], armF: [-2.7, 0.2], armB: [-2.3, 0.3] };
+        }
+        figure(pb, "#22305e");
+        figure(pa, INK);
+
+        burst(BALL0 + 40, FLOOR - 190, "POW!", seg(t, 3.28, 3.9) * (t < 3.9 ? 1 : 0), "#ffd23f");
+        burst(B - 40, FLOOR - 520, "GOAL!", seg(t, 4.3, 5.2) * (t < 5.6 ? 1 : 0), "#ff6b6b");
+        ctx.restore();
+
+        // title
+        const a = smooth(seg(t, 5.4, 6.0));
+        ctx.globalAlpha = a; ctx.fillStyle = INK; ctx.textAlign = "center";
+        ctx.font = "900 92px 'Arial Black', Impact, sans-serif";
+        ctx.fillText("Stick figures?", W / 2, 230);
+        ctx.font = "italic 46px Georgia, serif"; ctx.fillStyle = "#3b3742";
+        ctx.fillText("no drawings needed: every pose is code", W / 2, 300);
+        ctx.globalAlpha = 1; ctx.textAlign = "left";
+      }
+      window.addEventListener("hf-seek", (e) => renderAt(e.detail.time));
+      renderAt(+(new URLSearchParams(location.hash.slice(1)).get("t")) || window.__hfThreeTime || 0);
+    </script>
+  </body>
+</html>

@@ -1,26 +1,26 @@
 #!/usr/bin/env node
 // ============================================================
-//  publish/youtube/research.js — tìm ý tưởng bằng YouTube Data API — CHỈ ĐỌC YouTube
+//  publish/youtube/research.js — finds ideas with the YouTube Data API — READ-ONLY on YouTube
 //
-//  Tab "Nghiên cứu" trong Studio KHÔNG có API. Cái API cho được, và script này dùng, là:
-//    search.list  -> ai đang lên với chủ đề này (100 unit/lần gọi)
-//    channels.list + playlistItems.list + videos.list -> nguyên kho video của họ (1 unit/lần)
-//  rồi tính LƯỢT XEM / NGÀY và so với mức trung vị của chính kênh đó, để thấy tập nào vượt trội bất
-//  thường — đó mới là tín hiệu "đề tài này ăn", không phải kênh nào to.
+//  The "Research" tab in Studio has NO API. What the API does offer, and what this script uses, is:
+//    search.list  -> who is rising on this topic (100 units/call)
+//    channels.list + playlistItems.list + videos.list -> their whole video library (1 unit/call)
+//  then computes VIEWS / DAY and compares it with that channel's own median, to spot episodes that are unusually
+//  strong — that is the "this topic works" signal, not which channel is big.
 //
-//  KHÔNG khai báo danh sách đối thủ: kênh cùng sân được TỰ PHÁT HIỆN từ từ khóa gieo.
-//  Từ khóa gieo: chủ đề gõ vào (đối số hoặc --topic), không có thì lấy 4 tag đầu (baseTags) của mỗi
-//  niche cũ trong channels/<kênh>/legacy/niches/ (--niche <id> để chỉ lấy một niche).
+//  NO hand-maintained competitor list: channels in the same space are DISCOVERED from seed keywords.
+//  Seed keywords: the topic you type (argument or --topic), otherwise the first 4 tags (baseTags) of each
+//  legacy niche in channels/<channel>/legacy/niches/ (--niche <id> to use only one niche).
 //
-//  Chạy:
-//    node publish/youtube/research.js --channel=<kênh> "truyện cười bác ba phi"
-//    node publish/youtube/research.js --channel=<kênh> --topic "julius caesar" --region US --relevance en
-//    node publish/youtube/research.js --channel=<kênh> --niche co-tich
-//    node publish/youtube/research.js --channel=<kênh> --days 180 --channels 10 --seeds 6 --min-dur 90
-//  Vùng / ngôn ngữ tìm: mặc định VN / vi (cả hai kênh nói tiếng Việt); --region, --relevance để đổi.
+//  Run:
+//    node publish/youtube/research.js --channel=<channel> "roman history"   (a seed keyword, typed in the search language)
+//    node publish/youtube/research.js --channel=<channel> --topic "julius caesar" --region US --relevance en
+//    node publish/youtube/research.js --channel=<channel> --niche <niche-id>
+//    node publish/youtube/research.js --channel=<channel> --days 180 --channels 10 --seeds 6 --min-dur 90
+//  Search region / language: VN / vi by default (the channels are Vietnamese-language); change with --region, --relevance.
 //
-//  Hạn mức API mặc định 10.000 unit/ngày. Script in ra số unit đã tiêu.
-//  Kết quả lưu channels/<kênh>/research/<ngày>-<mồi>.md + .json (không đụng vào project nào).
+//  Default API quota is 10,000 units/day. The script prints the units spent.
+//  Results are saved to channels/<channel>/research/<date>-<seed>.md + .json (no project is touched).
 // ============================================================
 
 'use strict';
@@ -41,7 +41,7 @@ function seedsFromNiches(ch, only) {
   for (const id of ids) {
     let n;
     try { n = require(path.join(dir, `${id}.js`)); } catch { continue; }
-    // Lấy mấy tag ĐẦU: chúng là mô tả thể loại, tag đuôi thường là tên riêng quá hẹp.
+    // Take the FIRST few tags: they describe the genre; trailing tags are usually overly narrow proper names.
     for (const t of (n.baseTags || []).slice(0, 4)) if (!out.includes(t)) out.push(t);
   }
   return out;
@@ -61,7 +61,7 @@ const median = (xs) => {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
 
-// --- bước 1: gieo từ khóa -> kênh nào đang chiếm sân (tự phát hiện) ---
+// --- step 1: seed keywords -> which channels own the space (auto-discovered) ---
 async function discoverChannels(yt, seeds, { days, perSeed, minDurSec, region, relevance, ownChannel }) {
   const publishedAfter = new Date(Date.now() - days * 864e5).toISOString();
   const hits = new Map();   // channelId -> { title, seeds:Set, videoIds:Set }
@@ -79,12 +79,12 @@ async function discoverChannels(yt, seeds, { days, perSeed, minDurSec, region, r
       h.seeds.add(q);
       h.videoIds.add(it.id.videoId);
     }
-    process.stdout.write(`   gieo "${q}" → ${r.data.items.length} video\n`);
+    process.stdout.write(`   seed "${q}" → ${r.data.items.length} videos\n`);
   }
 
-  // Lọc kênh SHORTS ra. Từ khóa rộng như "truyện vui" kéo về cả kênh skit 20 giây
-  // (đo 23/09/2026: Nam Đồng, Ba Em Bé Lai lọt vào top vì vậy). Kênh mình làm truyện
-  // dài 2–4 phút, nên chỉ giữ kênh mà video KHỚP của họ phần lớn dài hơn ngưỡng.
+  // Filter out SHORTS channels. Broad keywords also pull in 20-second skit channels,
+  // which otherwise reach the top of the list. Our channels make 2–4 minute stories,
+  // so keep only channels whose MATCHING videos are mostly longer than the threshold.
   const all = [...hits.values()];
   const ids = [...new Set(all.flatMap((h) => [...h.videoIds]))];
   const dur = new Map();
@@ -99,13 +99,13 @@ async function discoverChannels(yt, seeds, { days, perSeed, minDurSec, region, r
   }
   const kept = all.filter((h) => h.medianDurSec >= minDurSec);
   const dropped = all.length - kept.length;
-  if (dropped) process.stdout.write(`   (bỏ ${dropped} kênh có video khớp ngắn hơn ${minDurSec}s — phần lớn là kênh Shorts)\n`);
+  if (dropped) process.stdout.write(`   (dropped ${dropped} channels whose matching videos are shorter than ${minDurSec}s — mostly Shorts channels)\n`);
 
-  // Kênh xuất hiện với nhiều từ khóa khác nhau = đúng sân, không phải trùng hợp.
+  // A channel that shows up for several different keywords is really in the space, not a coincidence.
   return kept.sort((a, b) => (b.seeds.size - a.seeds.size) || (b.videoIds.size - a.videoIds.size));
 }
 
-// --- bước 2: quét kho của một kênh, tính lượt xem/ngày ---
+// --- step 2: scan one channel's library, compute views/day ---
 async function scanChannel(yt, channelId, { maxVideos }) {
   const ch = await yt.youtube.channels.list({ part: ['snippet', 'contentDetails', 'statistics'], id: [channelId] });
   spend(1);
@@ -138,7 +138,7 @@ async function scanChannel(yt, channelId, { maxVideos }) {
     }
   }
   const med = median(videos.map((v) => v.viewsPerDay));
-  for (const v of videos) v.ratio = med ? v.viewsPerDay / med : 0;   // vượt trung vị của CHÍNH kênh đó bao nhiêu lần
+  for (const v of videos) v.ratio = med ? v.viewsPerDay / med : 0;   // how many times above THAT channel's own median
   return {
     channelId, title: c.snippet.title,
     subs: Number(c.statistics.subscriberCount || 0),
@@ -147,7 +147,7 @@ async function scanChannel(yt, channelId, { maxVideos }) {
   };
 }
 
-// --- bước 3: chữ nào hay xuất hiện trong tiêu đề của các tập VƯỢT TRỘI ---
+// --- step 3: frequent words in the titles of STANDOUT episodes (STOP: English + Vietnamese stop words, data) ---
 const STOP = new Set(('the and of to a in is it you that for on with as this was are be at by from or an my your how why what when who '
   + 'story stories part full hd new best episode ep video official animated animation explained '
   + 'tập chuyện truyện của và với là có cho một các những người thì mà ở đi về ra vào nghe kể phần '
@@ -167,27 +167,27 @@ function titleWords(videos) {
 
 function buildReport({ seeds, days, channels, outliers, words, ch, region, relevance }) {
   const L = [];
-  L.push(`# Tìm ý tưởng — ${ch.config.name} — ${new Date().toISOString().slice(0, 10)}`);
+  L.push(`# Idea research — ${ch.config.name} — ${new Date().toISOString().slice(0, 10)}`);
   L.push('');
-  L.push(`Từ khóa gieo: ${seeds.map((s) => `\`${s}\``).join(', ')} · cửa sổ phát hiện: ${days} ngày · vùng ${region}/${relevance} · ${units} unit API`);
+  L.push(`Seed keywords: ${seeds.map((s) => `\`${s}\``).join(', ')} · discovery window: ${days} days · region ${region}/${relevance} · ${units} API units`);
   L.push('');
-  L.push('## Kênh cùng sân (API tự tìm ra, không khai báo sẵn)');
-  L.push('| Kênh | Subs | Video | Đã quét | Trung vị xem/ngày |');
+  L.push('## Channels in the same space (found by the API, not a preset list)');
+  L.push('| Channel | Subs | Videos | Scanned | Median views/day |');
   L.push('|---|--:|--:|--:|--:|');
   for (const c of channels) {
     L.push(`| ${c.title} | ${c.subs.toLocaleString('vi-VN')} | ${c.videoCount} | ${c.scanned} | ${Math.round(c.medianViewsPerDay)} |`);
   }
   L.push('');
-  L.push('## Tập vượt trội so với chính kênh đó (≥1,8 lần trung vị)');
-  L.push('Đây là tín hiệu ĐỀ TÀI, đã trừ đi chuyện kênh to hay kênh nhỏ.');
+  L.push('## Episodes that outperform their own channel (≥1.8× median)');
+  L.push('This is a TOPIC signal, with channel size already factored out.');
   L.push('');
-  L.push('| x trung vị | Xem/ngày | Tuổi | Kênh | Tiêu đề |');
+  L.push('| × median | Views/day | Age | Channel | Title |');
   L.push('|--:|--:|--:|---|---|');
   for (const v of outliers) {
-    L.push(`| ${v.ratio.toFixed(1)}× | ${Math.round(v.viewsPerDay).toLocaleString('vi-VN')} | ${v.ageDays}n | ${v.channelTitle} | ${v.title.replace(/\|/g, '/')} |`);
+    L.push(`| ${v.ratio.toFixed(1)}× | ${Math.round(v.viewsPerDay).toLocaleString('vi-VN')} | ${v.ageDays}d | ${v.channelTitle} | ${v.title.replace(/\|/g, '/')} |`);
   }
   L.push('');
-  L.push('## Chữ hay gặp trong tiêu đề của các tập vượt trội');
+  L.push('## Frequent words in the titles of standout episodes');
   L.push(words.slice(0, 30).map(([w, n]) => `${w} (${n})`).join(' · '));
   L.push('');
   return L.join('\n');
@@ -205,21 +205,21 @@ async function main() {
   const relevance = a.flags.relevance || 'vi';
   const typed = [...a.pos, ...(typeof a.flags.topic === 'string' ? [a.flags.topic] : [])];
   const seeds = typed.length ? typed : seedsFromNiches(ch, a.flags.niche || null);
-  if (!seeds.length) throw new Error('Không có từ khóa gieo — truyền chủ đề ("…" hoặc --topic) hoặc --niche <id>');
+  if (!seeds.length) throw new Error('No seed keywords — pass a topic ("…" or --topic) or --niche <id>');
 
   const yt = await openYouTube(ch);
   const ownChannel = ch.config.channelId;
 
-  console.log(`🔎 ${ch.config.name}: gieo ${seeds.length} từ khóa, cửa sổ ${days} ngày, vùng ${region}/${relevance} (mỗi lần gieo tốn 100 unit)`);
+  console.log(`🔎 ${ch.config.name}: ${seeds.length} seed keywords, ${days}-day window, region ${region}/${relevance} (each seed costs 100 units)`);
   const found = await discoverChannels(yt, seeds, { days, perSeed, minDurSec, region, relevance, ownChannel });
-  console.log(`\n📡 Tự phát hiện ${found.length} kênh cùng sân — quét ${Math.min(maxChannels, found.length)} kênh nhiều tín hiệu nhất\n`);
+  console.log(`\n📡 Discovered ${found.length} channels in the same space — scanning the ${Math.min(maxChannels, found.length)} with the strongest signal\n`);
 
   const channels = [];
   for (const f of found.slice(0, maxChannels)) {
     const c = await scanChannel(yt, f.channelId, { maxVideos });
     if (!c) continue;
     channels.push(c);
-    console.log(`   ${c.title.padEnd(28).slice(0, 28)} ${String(c.subs).padStart(8)} subs · quét ${c.scanned} video · trung vị ${Math.round(c.medianViewsPerDay)} xem/ngày`);
+    console.log(`   ${c.title.padEnd(28).slice(0, 28)} ${String(c.subs).padStart(8)} subs · scanned ${c.scanned} videos · median ${Math.round(c.medianViewsPerDay)} views/day`);
   }
 
   const outliers = channels.flatMap((c) => c.videos.map((v) => ({ ...v, channelTitle: c.title })))
@@ -236,12 +236,12 @@ async function main() {
   fs.writeFileSync(md, buildReport({ seeds, days, channels, outliers, words, ch, region, relevance }), 'utf8');
   fs.writeFileSync(json, JSON.stringify({ channel: ch.id, seeds, days, region, relevance, units, channels, outliers }, null, 2), 'utf8');
 
-  console.log(`\n🏆 ${outliers.length} tập vượt trội (≥1,8× trung vị kênh của chính nó):`);
+  console.log(`\n🏆 ${outliers.length} standout episodes (≥1.8× their own channel's median):`);
   for (const v of outliers.slice(0, 12)) {
-    console.log(`   ${v.ratio.toFixed(1)}×  ${String(Math.round(v.viewsPerDay)).padStart(6)} xem/ngày  ${v.channelTitle.slice(0, 18).padEnd(18)}  ${v.title.slice(0, 62)}`);
+    console.log(`   ${v.ratio.toFixed(1)}×  ${String(Math.round(v.viewsPerDay)).padStart(6)} views/day  ${v.channelTitle.slice(0, 18).padEnd(18)}  ${v.title.slice(0, 62)}`);
   }
   console.log(`\n📄 ${studio.rel(md)}`);
-  console.log(`💰 Đã tiêu ${units} / 10.000 unit hạn mức ngày`);
+  console.log(`💰 Spent ${units} / 10,000 units of the daily quota`);
 }
 
 main().catch(fail);
