@@ -1,0 +1,8 @@
+{
+ "chapter": 10,
+ "assets": ["kits/nguyen-lao@purple", "heads/chinh-khach-la-ma@purple", "kits/linh-hau-ve@red", "kits/thay-boi-la-ma@teal",
+            "kits/cong-dan-la-ma@wool", "heads/nguoi-la-ma-cong-hoa@wool", "cutouts/tuong-pompey", "props/do-vat-ides"],
+ "backdrops": ["quang-truong-rome", "atrium-la-ma", "pho-subura", "hoi-truong-pompey"],
+ "tableaux": ["ides-dao", "ides-toga"],
+ "sfx": []
+}

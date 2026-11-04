@@ -1,0 +1,273 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Puppet rig test: a grid of figures × poses on one canvas, with joint markers. Built by tools/rigtest.py. -->
+    <script src="lib.js"></script>
+    <script type="importmap">
+      { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js" } }
+    </script>
+    <style>
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #ece6d8; }
+      #stage { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+      .lab { position: absolute; font: 600 15px sans-serif; color: #3b2a18; white-space: nowrap; }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage"></canvas>
+    <div id="labels"></div>
+    <script type="module">
+      import { THREE, makeFigure, applyPose, IDLE, gait, lights, renderer, makeMount, poseMount, makeAnimMount, poseAnimMount, makeAnimPerson, poseAnimPerson, W, H } from "../shared/js/engine.js";
+      import { SEATED, KNEEL, RIDING, rideOn } from "../shared/js/stage.js";
+
+      const P = (x) => Object.assign({}, IDLE, x);
+      const marks = window.RIG.marks;
+      const POSES = {
+        "đứng": P({}),
+        "đi 1": P(gait(0.39, 0.42)),
+        "đi 2": P(gait(1.16, 0.42)),
+        "giơ tay": P({ aL1: 2.7, aL2: 0.2, aR1: 2.6, aR2: 0.2 }),
+        "chỉ": P({ aR1: 1.5, aR2: 0.05 }),
+        "khoanh/ôm": P({ aL1: 0.6, aL2: 1.9, aR1: 0.7, aR2: 1.8 }),
+        "ghế thấp": Object.assign({}, SEATED, { seatH: 0.3 }),
+        "ngồi": Object.assign({}, SEATED, { seatH: 0.46 }),
+        "ngai cao": Object.assign({}, SEATED, { seatH: 0.75 }),
+        "quỳ": Object.assign({}, KNEEL),
+        "cúi": P({ lean: 0.5, tilt: 0.3 }),
+        "ngửa đầu": P({ tilt: -0.35, lean: -0.08 }),
+        "ngã": P({ fall: Math.PI / 2 - 0.1 }),
+        "cưỡi ngựa": Object.assign({}, RIDING, { ride: true }),
+      };
+      if (window.RIG.anims) {
+        // drawn animals: every frame of every cycle, with a rider (and the standing drawing without one)
+        const as = window.RIG.anims, cwa = 3.6, cha = 3.6;
+        const cols = [["đứng", null, 0], ["không người", null, 0]];
+        const seen = {};
+        for (const a of as) for (const c in LIB[a].frames.cycles) seen[c] = Math.max(seen[c] || 0, LIB[a].frames.cycles[c].length);
+        for (const c in seen) for (let i = 0; i < seen[c]; i++) cols.push([`${c} ${i + 1}`, c, i]);
+        const wva = cols.length * cwa, hva = Math.max((wva * H) / W, as.length * cha + 0.5), wwa = (hva * W) / H;
+        const sc = new THREE.Scene();
+        sc.background = new THREE.Color(0xece6d8);
+        lights(sc, [-6, 12, 14], 2.0);
+        const ca = new THREE.OrthographicCamera(-wwa / 2, wwa / 2, hva / 2, -hva / 2, 0.1, 100);
+        ca.position.set(0, 0, 20);
+        const labA = (txt, x, y) => {
+          const d = document.createElement("div");
+          d.className = "lab";
+          d.textContent = txt;
+          d.style.left = `${((x + wwa / 2) / wwa) * W}px`;
+          d.style.top = `${((hva / 2 - y) / hva) * H}px`;
+          document.getElementById("labels").appendChild(d);
+        };
+        cols.forEach(([n], c) => labA(n, -wva / 2 + c * cwa + 0.2, hva / 2 - 0.02));
+        as.forEach((aid, r) => {
+          const baseY = hva / 2 - 0.4 - (r + 1) * cha + 0.25;
+          labA(aid, -wva / 2 + 0.1, baseY + cha - 0.15);
+          const big = LIB[aid].frames.type === "elephant";
+          cols.forEach(([n, cyc, i], c) => {
+            if (cyc && !(LIB[aid].frames.cycles[cyc] || [])[i]) return; // this animal has no such frame (elephants don't gallop)
+            const x = -wva / 2 + c * cwa + cwa / 2;
+            if (LIB[aid].frames.type === "person") {
+              if (n === "không người") return;
+              const pp = makeAnimPerson(sc, aid, 1.4);
+              pp.root.position.set(x, baseY, 0);
+              poseAnimPerson(pp, cyc ? LIB[aid].frames.cycles[cyc][i] : "master");
+              const g = new THREE.Mesh(new THREE.PlaneGeometry(cwa * 0.95, 0.012), new THREE.MeshBasicMaterial({ color: 0x9a8a70 }));
+              g.position.set(x, baseY, -0.5);
+              sc.add(g);
+              return;
+            }
+            const m = makeAnimMount(sc, aid, big ? 0.75 : 1);
+            m.root.position.set(x, baseY, 0);
+            if (cyc) poseAnimMount(m, cyc, (i + 0.5) / LIB[aid].frames.cycles[cyc].length);
+            const g = new THREE.Mesh(new THREE.PlaneGeometry(cwa * 0.95, 0.012), new THREE.MeshBasicMaterial({ color: 0x9a8a70 }));
+            g.position.set(x, baseY, -0.5);
+            sc.add(g);
+            if (n !== "không người") {
+              const R = window.RIG.rider;
+              const f = makeFigure(sc, R.kit, R.heads, R.head, big ? 0.75 : 1, R.opts || {});
+              rideOn(m, f);
+              applyPose(f, Object.assign({}, RIDING, { aR1: cyc === "gallop" ? 1.4 : 0.5, aR2: 0.3 }));
+            }
+          });
+        });
+        const drawA = () => renderer.render(sc, ca);
+        drawA();
+        setTimeout(() => { drawA(); window.__ready = true; }, 2500);
+      } else if (window.RIG.animVideo) {
+        // motion check: one row per animal, stepping in place with a rider while the ground ticks slide by
+        const as = window.RIG.animVideo, rh = 3.6;
+        const hvv = as.length * rh + 0.4, wwv = (hvv * W) / H;
+        const sc = new THREE.Scene();
+        sc.background = new THREE.Color(0xece6d8);
+        lights(sc, [-6, 12, 14], 2.0);
+        const cv = new THREE.OrthographicCamera(-wwv / 2, wwv / 2, hvv / 2, -hvv / 2, 0.1, 100);
+        cv.position.set(0, 0, 20);
+        const rows = as.map((aid, r) => {
+          const baseY = hvv / 2 - 0.2 - (r + 1) * rh + 0.25;
+          const big = LIB[aid].frames.type === "elephant";
+          const m = makeAnimMount(sc, aid, big ? 0.75 : 1);
+          m.root.position.set(-wwv / 4, baseY, 0);
+          const R = window.RIG.rider;
+          const f = makeFigure(sc, R.kit, R.heads, R.head, big ? 0.75 : 1, R.opts || {});
+          rideOn(m, f);
+          const m2 = LIB[aid].frames.cycles.gallop ? makeAnimMount(sc, aid, 1) : null;
+          if (m2) m2.root.position.set(wwv / 4, baseY, 0);
+          const f2 = m2 ? makeFigure(sc, R.kit, R.heads, R.head, 1, R.opts || {}) : null;
+          if (m2) rideOn(m2, f2);
+          const ticks = Array.from({ length: 24 }, () => {
+            const g = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.05), new THREE.MeshBasicMaterial({ color: 0x9a8a70 }));
+            sc.add(g);
+            return g;
+          });
+          return { m, f, m2, f2, ticks, baseY };
+        });
+        window.renderAt = (t) => {
+          rows.forEach(({ m, f, m2, f2, ticks, baseY }) => {
+            const el = m.type === "elephant";
+            // strides per second: walk ~0.9 (horse) / 0.6 (elephant); gallop ~2
+            poseAnimMount(m, "walk", t * (el ? 0.6 : 0.9));
+            applyPose(f, Object.assign({}, RIDING, { aR1: 0.5, aR2: 0.3 }));
+            if (m2) {
+              poseAnimMount(m2, "gallop", t * 2.0);
+              applyPose(f2, Object.assign({}, RIDING, { aR1: 1.3, aR2: 0.3 }));
+            }
+            ticks.forEach((g, i) => {
+              const right = i >= 12,
+                sp = right ? 7 : el ? 1.2 : 1.6;
+              const span = wwv / 2;
+              const x0 = right ? 0 : -wwv / 2;
+              g.position.set(x0 + ((((i % 12) * span) / 12 - t * sp) % span + span) % span, baseY - 0.03, -0.4);
+              g.visible = right ? !!m2 : true;
+            });
+          });
+          renderer.render(sc, cv);
+        };
+        setTimeout(() => { window.renderAt(0); window.__ready = true; }, 3000);
+      } else if (window.RIG.mounts) {
+        // mounts: each animal through its gait (standing, four walk phases, a gallop), with and without a rider
+        const PH = [["đứng", 0, 0], ["bước 0", 0.0, 0.8], ["bước ¼", 0.25, 0.8], ["bước ½", 0.5, 0.8], ["bước ¾", 0.75, 0.8], ["phi", 0.3, 1.25], ["không người", 0.15, 0.8]];
+        const want = window.RIG.poses;
+        if (want) PH.splice(0, PH.length, ...PH.filter(([n]) => want.includes(n)));
+        const ms = window.RIG.mounts, cwm = 3.4, chm = 3.2;
+        const wvm = PH.length * cwm, hvm = Math.max((wvm * H) / W, ms.length * chm + 0.5), wwm = (hvm * W) / H;
+        const sc = new THREE.Scene();
+        sc.background = new THREE.Color(0xece6d8);
+        lights(sc, [-6, 12, 14], 2.0);
+        const cm = new THREE.OrthographicCamera(-wwm / 2, wwm / 2, hvm / 2, -hvm / 2, 0.1, 100);
+        cm.position.set(0, 0, 20);
+        const lab2 = (txt, x, y) => {
+          const d = document.createElement("div");
+          d.className = "lab";
+          d.textContent = txt;
+          d.style.left = `${((x + wwm / 2) / wwm) * W}px`;
+          d.style.top = `${((hvm / 2 - y) / hvm) * H}px`;
+          document.getElementById("labels").appendChild(d);
+        };
+        PH.forEach(([n], c) => lab2(n, -wvm / 2 + c * cwm + 0.2, hvm / 2 - 0.02));
+        const dots = [];
+        ms.forEach((mid, r) => {
+          const baseY = hvm / 2 - 0.4 - (r + 1) * chm + 0.25;
+          lab2(mid, -wvm / 2 + 0.1, baseY + chm - 0.15);
+          PH.forEach(([n, ph, amp], c) => {
+            const x = -wvm / 2 + c * cwm + cwm / 2;
+            const big = LIB[mid].type === "elephant";
+            const m = makeMount(sc, mid, big ? 0.62 : 1);
+            m.root.position.set(x, baseY, 0);
+            poseMount(m, ph, amp, 0);
+            const g = new THREE.Mesh(new THREE.PlaneGeometry(cwm * 0.95, 0.012), new THREE.MeshBasicMaterial({ color: 0x9a8a70 }));
+            g.position.set(x, baseY, -0.5);
+            sc.add(g);
+            if (n !== "không người") {
+              const R = window.RIG.rider;
+              const f = makeFigure(sc, R.kit, R.heads, R.head, big ? 0.62 : 1, R.opts || {});
+              rideOn(m, f);
+              applyPose(f, Object.assign({}, RIDING, { aR1: n === "phi" ? 1.4 : 0.5, aR2: 0.3 }));
+              if (marks) dots.push(f);
+            }
+            sc.updateMatrixWorld(true);
+            // hooves / feet: mark the lowest point of each leg's lower piece
+            for (const k in m.legs) {
+              const d = new THREE.Mesh(new THREE.CircleGeometry(0.035, 10), new THREE.MeshBasicMaterial({ color: 0xd02020, depthTest: false }));
+              const box = new THREE.Box3().setFromObject(m.legs[k].b);
+              d.position.set((box.min.x + box.max.x) / 2, box.min.y, 5);
+              sc.add(d);
+            }
+          });
+        });
+        const drawM = () => renderer.render(sc, cm);
+        drawM();
+        setTimeout(() => { drawM(); window.__ready = true; }, 1200);
+      } else {
+      const names = window.RIG.poses ? window.RIG.poses.filter((n) => POSES[n]) : Object.keys(POSES);
+      const figs = window.RIG.figures;
+      // cells sized so every figure × pose fits the frame (fewer of them → bigger, for close checks)
+      const cols = names.length, rows = figs.length;
+      const cw = 2.0, ch = 2.3;
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xece6d8);
+      lights(scene, [-6, 12, 14], 2.0);
+      const wv = cols * cw, hv = Math.max((wv * H) / W, rows * ch + 0.45);
+      const ww = (hv * W) / H;
+      const cam = new THREE.OrthographicCamera(-ww / 2, ww / 2, hv / 2, -hv / 2, 0.1, 100);
+      cam.position.set(0, 0, 20);
+      
+      const dot = (c) => new THREE.Mesh(new THREE.CircleGeometry(0.03, 10), new THREE.MeshBasicMaterial({ color: c, depthTest: false }));
+      const lab = (txt, x, y) => {
+        const d = document.createElement("div");
+        d.className = "lab";
+        d.textContent = txt;
+        d.style.left = `${((x + ww / 2) / ww) * W}px`;
+        d.style.top = `${((hv / 2 - y) / hv) * H}px`;
+        document.getElementById("labels").appendChild(d);
+      };
+      names.forEach((n, c) => lab(n, -wv / 2 + c * cw + 0.15, hv / 2 - 0.02));
+      const joints = [];
+      figs.forEach((spec, r) => {
+        const baseY = hv / 2 - 0.35 - (r + 1) * ch + 0.2;
+        lab(spec.label, -wv / 2 + 0.1, baseY + ch - 0.12);
+        names.forEach((n, c) => {
+          const x = -wv / 2 + c * cw + cw / 2;
+          const f = makeFigure(scene, spec.kit, spec.heads, spec.head, 1, spec.opts || {});
+          const p = POSES[n];
+          if (p.ride) {
+            if (!window.RIG.mount) return;
+            const m = makeMount(scene, window.RIG.mount, 0.9);
+            m.root.position.set(x, baseY, -0.1);
+            poseMount(m, 0.15, 0.5, 0);
+            rideOn(m, f);
+            applyPose(f, p);
+            if (marks) joints.push(f);
+            return;
+          }
+          const seatH = p.seatH || 0.46;
+          f.root.position.set(x + (n === "ngã" ? 0.7 : 0), baseY + (p.seat ? seatH : 0), 0);
+          applyPose(f, p);
+          if (p.seat) {
+            const b = new THREE.Mesh(new THREE.BoxGeometry(0.55, seatH, 0.3), new THREE.MeshBasicMaterial({ color: 0x8a6a44 }));
+            b.position.set(x - 0.12, baseY + seatH / 2, -0.2);
+            scene.add(b);
+          }
+          const g = new THREE.Mesh(new THREE.PlaneGeometry(cw * 0.9, 0.012), new THREE.MeshBasicMaterial({ color: 0x9a8a70 }));
+          g.position.set(x, baseY, -0.5);
+          scene.add(g);
+          if (marks) joints.push(f);
+        });
+      });
+      scene.updateMatrixWorld(true);
+      for (const f of joints) {
+        const pts = [[f.head, 0xd02020], [f.armL.a, 0x2060d0], [f.armR.a, 0x2060d0], [f.armL.b, 0x20a040], [f.armR.b, 0x20a040], [f.legL.a, 0x2060d0], [f.legR.a, 0x2060d0], [f.legL.b, 0x20a040], [f.legR.b, 0x20a040]];
+        for (const [o, c] of pts) {
+          const m = dot(c);
+          o.getWorldPosition(m.position);
+          m.position.z = 5;
+          scene.add(m);
+        }
+      }
+      const draw = () => renderer.render(scene, cam);
+      draw();
+      setTimeout(() => { draw(); window.__ready = true; }, 1200);
+      }
+    </script>
+  </body>
+</html>

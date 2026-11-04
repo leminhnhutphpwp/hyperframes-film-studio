@@ -1,0 +1,21 @@
+{
+ "kind": "props",
+ "id": "do-vat-ides",
+ "era": null,
+ "region": null,
+ "role": null,
+ "desc": "Flat solid magenta #FF00FF background behind every item. Paper cut-out Roman objects of 46–44 BC: (1) a short Roman dagger with a crossguard, (2) a white cloth royal diadem band tied in a ring with hanging ends, (3) an ornate gilded chair with a high back and lion-paw legs, (4) an unrolled papyrus calendar with a grid of small columns and a sun circle, no readable letters, (5) a laurel wreath of green leaves with a red ribbon, (6) a wax writing tablet with a stylus, (7) a folded letter with a wax seal, (8) a bundle of rolled papyrus scrolls tied with string",
+ "prompt": "Create ONE image, landscape 3:2. It is a PROPS SHEET for paper cut-out animation with eight separate props, in this order left-to-right, top row then bottom row: dao-gam, vuong-mien, ghe-vang, lich-cuon, vong-nguyet-que, but-sap, thu-niem-phong, bo-la-co. Flat solid magenta #FF00FF background behind every item. Paper cut-out Roman objects of 46–44 BC: (1) a short Roman dagger with a crossguard, (2) a white cloth royal diadem band tied in a ring with hanging ends, (3) an ornate gilded chair with a high back and lion-paw legs, (4) an unrolled papyrus calendar with a grid of small columns and a sun circle, no readable letters, (5) a laurel wreath of green leaves with a red ribbon, (6) a wax writing tablet with a stylus, (7) a folded letter with a wax seal, (8) a bundle of rolled papyrus scrolls tied with string Background: perfectly flat solid magenta #FF00FF everywhere, no shadows, no gradients, no texture on the background. Layout: an invisible 4 columns x 2 rows grid of equal cells; put exactly ONE item centred in each cell, fully inside its cell with wide magenta margins, items never touching. No grid lines, no labels, no text.\n\nArt style for every asset in this library: flat hand-painted paper cut-out illustration for a history explainer animation, clean simple shapes, subtle paper grain, thin dark-brown outline, soft muted natural colours, gentle painterly shading, consistent proportions (adult figure about 7 heads tall).\nCostumes are SYMBOLIC and GENERIC for the era and region: suggest the period through silhouette, headwear, garment cut and weapon type only. Do not copy any specific dynasty, uniform, museum piece or real insignia. No writing, no letters, no numbers, no real flags, no religious symbols, no real coats of arms. Emblems, if any, are simple invented geometric shapes.\nFaction colour rule: every cloth part that shows which side a character fights for (main tunic or robe panel, headband, sash, cape, shield paint, banner) is painted in solid TEAL #2A8C8C. Nothing else in the image uses teal or any blue-green: skin, hair, wood, leather, metal, straw stay natural colours.",
+ "drawn": "2026-10-16",
+ "colours": [],
+ "names": [
+  "dao-gam",
+  "vuong-mien",
+  "ghe-vang",
+  "lich-cuon",
+  "vong-nguyet-que",
+  "but-sap",
+  "thu-niem-phong",
+  "bo-la-co"
+ ]
+}

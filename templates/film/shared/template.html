@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>{{TITLE}}</title>
+    <script src="assets/lib/library.js"></script>
+    <script src="js/data.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/"
+        }
+      }
+    </script>
+    <style>
+{{FONTCSS}}
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #120d08;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #120d08;
+        font-family: "Lora", serif;
+      }
+      .overlay-clip {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .battle {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      #stage,
+      #ov-svg,
+      #ov-labels {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      #ov-labels {
+        pointer-events: none;
+      }
+      .map-region {
+        position: absolute;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        white-space: nowrap;
+        text-shadow: 0 0 6px rgba(243, 231, 201, 0.95), 0 0 18px rgba(243, 231, 201, 0.75);
+      }
+      .map-place {
+        position: absolute;
+        font-weight: 700;
+        color: #2c1e10;
+        white-space: nowrap;
+        text-shadow: 0 0 5px rgba(243, 231, 201, 1), 0 0 14px rgba(243, 231, 201, 0.85);
+      }
+      .map-caption {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        padding: 4px 18px 6px;
+        border-radius: 8px;
+        background: rgba(243, 231, 201, 0.72);
+        font-weight: 600;
+        font-style: italic;
+        color: #2c1e10;
+        white-space: nowrap;
+        text-shadow: 0 0 5px rgba(243, 231, 201, 1), 0 0 14px rgba(243, 231, 201, 0.85);
+      }
+      #stamp {
+        position: absolute;
+        left: 72px;
+        bottom: 72px;
+        padding: 18px 30px 20px 26px;
+        border-left: 10px solid #a83a2c;
+        border-radius: 6px;
+        background: rgba(243, 231, 201, 0.94);
+        color: #2c1e10;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+        opacity: 0;
+      }
+      #stamp .year {
+        font-size: 58px;
+        font-weight: 700;
+        line-height: 1.05;
+      }
+      #stamp .line {
+        margin-top: 6px;
+        font-size: 30px;
+        font-weight: 600;
+        color: #5a4630;
+      }
+      #title-card {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 1300px;
+        text-align: center;
+        color: #f3e7c9;
+        opacity: 0;
+      }
+      #title-card .t1 {
+        font-size: 96px;
+        font-weight: 700;
+        line-height: 1.1;
+        text-shadow: 0 6px 30px rgba(0, 0, 0, 0.6);
+      }
+      #title-card .t2 {
+        margin-top: 22px;
+        font-size: 40px;
+        font-weight: 600;
+        color: #e2cfa2;
+        text-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      }
+      #note-card {
+        position: absolute;
+        right: 96px;
+        top: 120px;
+        width: 640px;
+        padding: 34px 40px 38px;
+        border-radius: 8px;
+        background: #f3e7c9;
+        color: #2c1e10;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+        opacity: 0;
+      }
+      #note-card .head {
+        font-size: 44px;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+      #note-card .body {
+        white-space: pre-line;
+        margin-top: 16px;
+        font-size: 32px;
+        font-weight: 600;
+        line-height: 1.4;
+        color: #5a4630;
+      }
+      #tableau,
+      #fx,
+      #light,
+      #grade,
+      #vignette,
+      #wipe,
+      #wipe svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+      #tableau {
+        overflow: hidden;
+        opacity: 0;
+        background: #120d08;
+      }
+      .tab-layer {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform-origin: 50% 50%;
+        display: none;
+      }
+      #light {
+        mix-blend-mode: screen;
+      }
+      #grade {
+        opacity: 0;
+      }
+      #vignette {
+        opacity: 0;
+        background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0) 45%, rgba(8, 5, 3, 0.85) 100%);
+      }
+      #bars::before,
+      #bars::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: var(--bar, 0px);
+        background: #050302;
+      }
+      #bars::before {
+        top: 0;
+      }
+      #bars::after {
+        bottom: 0;
+      }
+      #bars {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      #wipe {
+        opacity: 0;
+      }
+      #wipe-paper {
+        position: absolute;
+        top: -5%;
+        bottom: -5%;
+        width: 130%;
+        left: -130%;
+        background: radial-gradient(ellipse at 40% 50%, #f1e4c2 0%, #dcc79a 100%);
+        box-shadow: 30px 0 60px rgba(0, 0, 0, 0.5);
+        transform: translateX(calc(var(--u, 0) * 100%)) rotate(-2deg);
+        display: none;
+      }
+      #wipe.wipe-paper #wipe-paper {
+        display: block;
+      }
+      #wipe.wipe-paper svg {
+        display: none;
+      }
+      #wipe.wipe-flash {
+        background: #fff8ec;
+      }
+      #wipe.wipe-flash svg {
+        display: none;
+      }
+      #tint {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at 50% 45%, rgba(214, 170, 96, 0.55) 0%, rgba(120, 72, 24, 0.85) 100%);
+        mix-blend-mode: multiply;
+        opacity: 0;
+      }
+      #dim {
+        position: absolute;
+        inset: 0;
+        background: #0c0805;
+        opacity: 0;
+      }
+      #fade {
+        position: absolute;
+        inset: 0;
+        background: #0c0805;
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Generated by ../shared/chapter_build.py from chapter.json: one Three.js stage drawn from HyperFrames time (hf-seek) -->
+    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-width="1920" data-height="1080" data-duration="{{DUR}}">
+{{VIDEOS}}
+      <canvas id="stage"></canvas>
+      <div id="tableau"></div>
+      <div id="grade"></div>
+      <div id="vignette"></div>
+      <canvas id="fx" width="1920" height="1080"></canvas>
+      <canvas id="light" width="1920" height="1080"></canvas>
+      <svg id="ov-svg" viewBox="0 0 1920 1080" data-layout-allow-overflow></svg>
+      <div id="tint"></div>
+      <div id="dim"></div>
+      <div id="ov-labels" data-layout-allow-overflow></div>
+      <div id="stamp"><div class="year"></div><div class="line"></div></div>
+      <div id="note-card"><div class="head"></div><div class="body"></div></div>
+      <div id="title-card"><div class="t1">{{T1}}</div><div class="t2">{{T2}}</div></div>
+      <div id="bars"></div>
+      <div id="wipe"><svg viewBox="0 0 1920 1080"><defs><filter id="wipe-f" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.011" numOctaves="3" seed="7" /><feDisplacementMap id="wipe-turb" in="SourceGraphic" scale="110" /></filter></defs><g id="wipe-g" filter="url(#wipe-f)"></g></svg><div id="wipe-paper"></div></div>
+{{OVERLAYS}}
+      <div id="fade"></div>
+{{AUDIOS}}
+    </div>
+    <script type="module" src="shared/js/main.js"></script>
+  </body>
+</html>

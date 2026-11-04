@@ -1,0 +1,11 @@
+#!/bin/bash
+# East Asian cavalry (2026-10-13). Mount parts + two rider kits, symbolic costumes matching dong-a-trung-dai-bo-binh-nang.
+cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
+A=(.venv/bin/python -I tools/asset.py draw)
+m1() { "${A[@]}" mount ngua-dong-a --names body,head,front-upper,front-lower,hind-upper,hind-lower,tail,saddle --desc "a sturdy medium-sized chestnut war horse with a dark mane. Parts: (1) BODY: barrel and chest only, no head, no neck, no legs, no tail; (2) HEAD AND NECK together as one piece with a leather bridle and a small red-brown tassel under the jaw, the neck base at the lower left where it joins the shoulders; (3) FRONT UPPER LEG: shoulder to knee; (4) FRONT LOWER LEG: knee to hoof; (5) HIND UPPER LEG: hip and thigh down to the hock; (6) HIND LOWER LEG: hock to hoof; (7) TAIL hanging down, tied with a cord near the top; (8) SADDLE seen from the side: a wooden saddle with a tall upright front and back, over a saddle cloth whose cloth is teal with a plain light border, round metal stirrups on leather straps"; }
+k1() { "${A[@]}" kit dong-a-trung-dai-ky-binh --era trung-dai --region dong-a --role ky-binh --desc "generic medieval East Asian armoured horseman: rounded iron helmet with a small plume and neck flaps, simple lamellar-style armour over a knee-length riding robe whose cloth is teal, armoured shoulder flaps, loose trousers of undyed light cloth (the same light colour on the thigh piece and the lower-leg piece; only the robe skirt over the thigh is teal) and tall leather riding boots; a long cavalry spear with a narrow iron head and a small teal pennon drawn vertically; a small round shield painted teal with an iron rim"; }
+k2() { "${A[@]}" kit dong-a-trung-dai-ky-xa --era trung-dai --region dong-a --role ky-binh --desc "generic medieval East Asian mounted archer: light cloth-covered cap with a short plume, a padded knee-length riding robe whose cloth is teal tied with a leather belt, short lamellar vest, loose trousers and leather riding boots; the main weapon is a recurved composite bow drawn vertically with its string; instead of a shield draw a tall leather quiver of arrows with a teal cloth panel"; }
+mkdir -p library/logs
+for f in m1 k1 k2; do $f > library/logs/ea-$f.log 2>&1 & done
+wait
+grep -h -E "^saved|did not|still not|grid" library/logs/ea-{m1,k1,k2}.log

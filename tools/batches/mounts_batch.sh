@@ -1,0 +1,14 @@
+#!/bin/bash
+# Cavalry and war elephants (2026-10-13). Mount parts + rider kits, symbolic costumes.
+cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
+A=(.venv/bin/python -I tools/asset.py draw)
+FEATHER="a cloth headband with a few long bird feathers standing straight up and slightly swept back like a bird crest, as on Dong Son bronze drum figures (NOT a Native American war bonnet: no feather fan, no beadwork, no hanging tails)"
+m1() { "${A[@]}" mount ngua-chien --names body,head,front-upper,front-lower,hind-upper,hind-lower,tail,saddle --desc "a sturdy brown war horse with a dark mane. Parts: (1) BODY: barrel and chest only, no head, no neck, no legs, no tail; (2) HEAD AND NECK together as one piece, the neck base at the lower left where it joins the shoulders; (3) FRONT UPPER LEG: shoulder to knee; (4) FRONT LOWER LEG: knee to hoof; (5) HIND UPPER LEG: hip and thigh down to the hock; (6) HIND LOWER LEG: hock to hoof; (7) TAIL hanging down; (8) SADDLE seen from the side with a long saddle cloth whose cloth is teal and leather stirrup straps"; }
+m2() { "${A[@]}" mount voi-chien --names body,head,front-upper,front-lower,hind-upper,hind-lower,tail,saddle --desc "a large Asian war elephant with grey wrinkled skin. Parts: (1) BODY: barrel and back only, no head, no legs, no tail; (2) HEAD with the ear, short tusks and the trunk hanging down, as one piece; (3) FRONT UPPER LEG: shoulder to knee; (4) FRONT LOWER LEG: knee to foot; (5) HIND UPPER LEG: hip to knee; (6) HIND LOWER LEG: knee to foot; (7) thin TAIL hanging down; (8) SADDLE: a large saddle cloth whose cloth is teal draped over the back with a small open wooden riding platform on top"; }
+k1() { "${A[@]}" kit chau-au-trung-dai-ky-binh --era trung-dai --region chau-au --role ky-binh --desc "generic medieval European mounted knight: steel helmet with an open face, mail armour under a surcoat whose cloth is teal, armoured legs with long riding boots, a long wooden lance drawn vertically, a heater shield painted teal with a simple invented light-coloured geometric emblem"; }
+k2() { "${A[@]}" kit dia-trung-hai-co-dai-ky-binh --era co-dai --region dia-trung-hai --role ky-binh --desc "generic ancient Mediterranean horseman: simple bronze helmet, short tunic whose cloth is teal with a leather cuirass, riding boots, a long cavalry spear drawn vertically, a small round shield painted teal"; }
+k3() { "${A[@]}" kit dong-nam-a-co-dai-quan-tuong --era co-dai --region dong-nam-a --role ky-binh --desc "symbolic ancient Southeast Asian Bronze Age war-elephant rider: $FEATHER, the headband cloth is teal; a sleeveless knee-length wrap tunic whose cloth is teal tied with a cord belt; bronze armbands, bare legs and feet; a long bronze-tipped spear drawn vertically; a small round rattan shield painted teal"; }
+mkdir -p library/logs
+for f in m1 m2 k1 k2 k3; do $f > library/logs/$f.log 2>&1 & done
+wait
+grep -h -E "^saved|did not|still not" library/logs/{m1,m2,k1,k2,k3}.log

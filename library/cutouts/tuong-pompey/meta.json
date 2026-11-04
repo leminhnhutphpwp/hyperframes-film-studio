@@ -1,0 +1,11 @@
+{
+ "kind": "cutout",
+ "id": "tuong-pompey",
+ "era": null,
+ "region": null,
+ "role": null,
+ "desc": "a single white marble statue of a Roman general of the 1st century BC in a toga, standing on a tall square pedestal, broad face with a lock of hair raised over the forehead, side-front view, no inscription",
+ "prompt": "Create ONE image, landscape 3:2. It is ONE single large paper cut-out piece for puppet animation: a single white marble statue of a Roman general of the 1st century BC in a toga, standing on a tall square pedestal, broad face with a lock of hair raised over the forehead, side-front view, no inscription. Strict side view, the piece centred and filling most of the frame with wide flat magenta margins on every side, nothing else in the image. Background: perfectly flat solid magenta #FF00FF everywhere, no shadows, no gradients, no texture on the background.\n\nArt style for every asset in this library: flat hand-painted paper cut-out illustration for a history explainer animation, clean simple shapes, subtle paper grain, thin dark-brown outline, soft muted natural colours, gentle painterly shading, consistent proportions (adult figure about 7 heads tall).\nCostumes are SYMBOLIC and GENERIC for the era and region: suggest the period through silhouette, headwear, garment cut and weapon type only. Do not copy any specific dynasty, uniform, museum piece or real insignia. No writing, no letters, no numbers, no real flags, no religious symbols, no real coats of arms. Emblems, if any, are simple invented geometric shapes.\nFaction colour rule: every cloth part that shows which side a character fights for (main tunic or robe panel, headband, sash, cape, shield paint, banner) is painted in solid TEAL #2A8C8C. Nothing else in the image uses teal or any blue-green: skin, hair, wood, leather, metal, straw stay natural colours.",
+ "drawn": "2026-10-16",
+ "colours": []
+}

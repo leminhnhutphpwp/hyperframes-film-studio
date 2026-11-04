@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Battle Map</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/"
+        }
+      }
+    </script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #000;
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+      }
+      #three-layer {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        display: block;
+      }
+      #vignette {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0) 60%, rgba(25, 15, 0, 0.4) 100%);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-width="1920" data-height="1080" data-duration="10">
+      <canvas id="three-layer"></canvas>
+      <div id="vignette"></div>
+    </div>
+
+    <script type="module">
+      import * as THREE from "three";
+
+      const W = 1920,
+        H = 1080,
+        DUR = 10;
+      const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("three-layer"), antialias: true });
+      renderer.setSize(W, H, false);
+      renderer.setPixelRatio(1);
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.0;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      const HAZE = 0xcdb894;
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(HAZE);
+      scene.fog = new THREE.Fog(HAZE, 60, 150);
+      const camera = new THREE.PerspectiveCamera(37, W / H, 0.1, 500);
+
+      // ---------- helpers ----------
+      const clamp01 = (x) => Math.min(1, Math.max(0, x));
+      const smooth = (x) => {
+        x = clamp01(x);
+        return x * x * (3 - 2 * x);
+      };
+      const easeOut = (x) => 1 - Math.pow(1 - clamp01(x), 3);
+      const easeIn = (x) => Math.pow(clamp01(x), 2);
+      const lerp = (a, b, u) => a + (b - a) * u;
+      const seg = (t, a, b) => clamp01((t - a) / (b - a));
+      function rand(n) {
+        n = (n * 374761393 + 668265263) | 0;
+        n = Math.imul(n ^ (n >>> 13), 1274126177);
+        return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+      }
+      const mixPose = (a, b, w) => {
+        const o = {};
+        for (const k in a) o[k] = lerp(a[k], k in b ? b[k] : a[k], w);
+        return o;
+      };
+
+      // ---------- light, ground ----------
+      scene.add(new THREE.HemisphereLight(0xc9d6e4, 0x5b4a30, 1.2));
+      const sun = new THREE.DirectionalLight(0xffe2bd, 2.6);
+      sun.position.set(-14, 30, 22);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(4096, 2048);
+      sun.shadow.bias = -0.0003;
+      Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 18, bottom: -18, near: 1, far: 90 });
+      scene.add(sun);
+
+      const groundGeo = new THREE.PlaneGeometry(260, 200, 130, 100);
+      groundGeo.rotateX(-Math.PI / 2);
+      const gp = groundGeo.attributes.position,
+        gcol = [];
+      for (let i = 0; i < gp.count; i++) {
+        const x = gp.getX(i),
+          z = gp.getZ(i);
+        const far = Math.max(0, Math.hypot(x * 0.6, z) - 46);
+        gp.setY(i, -0.05 + far * 0.06 * (Math.sin(x * 0.07) + Math.cos(z * 0.09) + 1.1));
+        const n = 0.82 + 0.18 * rand(i),
+          dry = 0.5 + 0.5 * Math.sin(x * 0.11 + z * 0.07);
+        gcol.push(0.36 * n, 0.45 * n, 0.2 * n);
+      }
+      groundGeo.setAttribute("color", new THREE.Float32BufferAttribute(gcol, 3));
+      groundGeo.computeVertexNormals();
+      const ground = new THREE.Mesh(groundGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      // painted terrain (generated with GPT Image via Codex) laid over the battlefield
+      const terrainTex = new THREE.TextureLoader().load("assets/terrain.jpg");
+      terrainTex.colorSpace = THREE.SRGBColorSpace;
+      terrainTex.anisotropy = 8;
+      const terrain = new THREE.Mesh(new THREE.PlaneGeometry(76, 54), new THREE.MeshStandardMaterial({ map: terrainTex, roughness: 1 }));
+      terrain.rotation.x = -Math.PI / 2;
+      terrain.position.set(0, 0.01, -9);
+      terrain.receiveShadow = true;
+      scene.add(terrain);
+
+      // scattered grass tufts and stones for scale
+      const tuftGeo = new THREE.ConeGeometry(0.12, 0.35, 4);
+      const tuftMat = new THREE.MeshStandardMaterial({ color: 0x5d6b33, roughness: 1 });
+      const tufts = new THREE.InstancedMesh(tuftGeo, tuftMat, 700);
+      const m4 = new THREE.Matrix4();
+      for (let i = 0; i < 700; i++) {
+        m4.makeTranslation((rand(i + 9000) - 0.5) * 60, 0.12, (rand(i + 9100) - 0.5) * 34);
+        tufts.setMatrixAt(i, m4);
+      }
+      tufts.receiveShadow = true;
+      // tufts are painted into the terrain now
+
+      // ---------- paper cut-out rig (parts painted with GPT Image, cut by cut_parts.py) ----------
+      // Angle convention matches the 2D rig: 0 = straight down, + = forward (+x before mirroring).
+      const PARTS = {"red":{"head":{"w":305,"h":335,"top":[114.0,0.0],"bottom":[164.0,335.0]},"torso":{"w":221,"h":442,"top":[91.0,0.0],"bottom":[110.0,442.0],"shoulder":[99.0,44.2]},"upper":{"w":143,"h":381,"top":[70.5,0.0],"bottom":[80.0,381.0]},"fore":{"w":132,"h":337,"top":[51.0,0.0],"bottom":[80.0,337.0]},"thigh":{"w":185,"h":379,"top":[83.5,0.0],"bottom":[73.5,379.0]},"shin":{"w":222,"h":395,"top":[80.5,0.0],"bottom":[63.5,323.9]},"weapon":{"w":80,"h":439,"top":[39.5,0.0],"bottom":[39.5,439.0]},"shield":{"w":349,"h":356,"top":[174.5,0.0],"bottom":[174.0,356.0]}},"yellow":{"head":{"w":350,"h":329,"top":[142.5,0.0],"bottom":[174.0,329.0]},"torso":{"w":208,"h":426,"top":[83.5,0.0],"bottom":[102.0,426.0],"shoulder":[83.5,42.6]},"upper":{"w":112,"h":448,"top":[57.0,0.0],"bottom":[64.0,448.0]},"fore":{"w":128,"h":380,"top":[49.5,0.0],"bottom":[78.0,380.0]},"thigh":{"w":165,"h":397,"top":[78.0,0.0],"bottom":[77.5,397.0]},"shin":{"w":193,"h":380,"top":[64.5,0.0],"bottom":[54.5,311.59999999999997]},"weapon":{"w":45,"h":481,"top":[22.0,0.0],"bottom":[22.5,481.0]},"shield":{"w":349,"h":359,"top":[177.5,0.0],"bottom":[175.0,359.0]}}};
+      const texLoader = new THREE.TextureLoader();
+      const texCache = {};
+      function partMat(army, name) {
+        const key = army + "_" + name;
+        if (!texCache[key]) {
+          const tex = texLoader.load(`assets/parts/${key}.png`);
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.anisotropy = 4;
+          texCache[key] = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 1 });
+        }
+        return texCache[key];
+      }
+      // Pixel → metre scale per army: hip-to-sole leg length ≈ 0.92 m.
+      const SCALE = {};
+      for (const army of ["red", "yellow"]) {
+        const P = PARTS[army];
+        SCALE[army] = 0.92 / (P.thigh.h * 0.88 + P.shin.h);
+      }
+      const geoCache = {};
+      // A plane showing one part, translated so the given pixel pivot sits at the origin.
+      function card(army, name, pivot, z) {
+        const P = PARTS[army][name],
+          k = SCALE[army];
+        const key = `${army}_${name}_${pivot[0]}_${pivot[1]}`;
+        if (!geoCache[key]) {
+          const g = new THREE.PlaneGeometry(P.w * k, P.h * k);
+          g.translate(-(pivot[0] - P.w / 2) * k, -(P.h / 2 - pivot[1]) * k, 0);
+          geoCache[key] = g;
+        }
+        const m = new THREE.Mesh(geoCache[key], partMat(army, name));
+        m.position.z = z;
+        m.castShadow = true;
+        return m;
+      }
+      const meshOf = (geo, mat) => {
+        const m = new THREE.Mesh(geo, mat);
+        m.castShadow = true;
+        return m;
+      };
+
+      function makeFigure(army) {
+        const P = PARTS[army],
+          k = SCALE[army];
+        const L = {
+          upper: P.upper.h * 0.86 * k,
+          fore: P.fore.h * 0.82 * k,
+          thigh: P.thigh.h * 0.88 * k,
+          shin: P.shin.bottom[1] * k,
+          sole: (P.shin.h - P.shin.bottom[1]) * k,
+        };
+        const root = new THREE.Group();
+        const fall = new THREE.Group(); // pivots at the feet for falls
+        root.add(fall);
+        const hip = new THREE.Group();
+        fall.add(hip);
+
+        // torso: hip joint ~70% down the tunic, neck at the top edge
+        const T = P.torso;
+        const hipPx = [(T.top[0] + T.bottom[0]) / 2, T.h * 0.7];
+        const torso = new THREE.Group();
+        torso.add(card(army, "torso", hipPx, 0));
+        hip.add(torso);
+        const toLocal = (px) => [(px[0] - hipPx[0]) * k, (hipPx[1] - px[1]) * k];
+
+        const head = new THREE.Group();
+        const neck = toLocal(T.top);
+        head.position.set(neck[0], neck[1] - 0.04, 0);
+        head.add(card(army, "head", P.head.bottom, 0.012));
+        torso.add(head);
+
+        function limb(parent, at, upName, loName, upLen, loLen, z) {
+          const a = new THREE.Group();
+          a.position.set(at[0], at[1], z);
+          a.add(card(army, upName, P[upName].top, 0));
+          const b = new THREE.Group();
+          b.position.y = -upLen;
+          b.add(card(army, loName, P[loName].top, 0.002));
+          a.add(b);
+          const end = new THREE.Group();
+          end.position.y = -loLen;
+          b.add(end);
+          parent.add(a);
+          return { a, b, end };
+        }
+        const sh = toLocal(T.shoulder);
+        // armL = far arm (shield / bow), armR = near arm (weapon / draw hand)
+        const armL = limb(torso, [sh[0] - 0.02, sh[1]], "upper", "fore", L.upper, L.fore, -0.06);
+        const armR = limb(torso, sh, "upper", "fore", L.upper, L.fore, 0.035);
+        const legL = limb(hip, [0.02, 0], "thigh", "shin", L.thigh, L.shin, -0.03);
+        const legR = limb(hip, [-0.02, 0], "thigh", "shin", L.thigh, L.shin, -0.02);
+        scene.add(root);
+        return { root, fall, hip, torso, head, armL, armR, legL, legR, L, army };
+      }
+
+      function applyPose(f, p) {
+        const L = f.L;
+        const fh = (a, b) => L.thigh * Math.cos(a) + L.shin * Math.cos(a + b);
+        f.hip.position.y = Math.max(fh(p.lL1, p.lL2), fh(p.lR1, p.lR2)) + L.sole + (p.lift || 0);
+        f.torso.rotation.z = -p.lean;
+        f.head.rotation.z = -(p.tilt || 0);
+        f.armL.a.rotation.z = p.aL1 + p.lean;
+        f.armL.b.rotation.z = p.aL2;
+        f.armR.a.rotation.z = p.aR1 + p.lean;
+        f.armR.b.rotation.z = p.aR2;
+        f.legL.a.rotation.z = p.lL1;
+        f.legL.b.rotation.z = p.lL2;
+        f.legR.a.rotation.z = p.lR1;
+        f.legR.b.rotation.z = p.lR2;
+        f.fall.rotation.z = p.fall || 0;
+      }
+
+      // ---------- props ----------
+      const MAT = {
+        red: new THREE.MeshStandardMaterial({ color: 0x8e2b22, roughness: 0.75 }),
+        ochre: new THREE.MeshStandardMaterial({ color: 0xa8812f, roughness: 0.75 }),
+        wood: new THREE.MeshStandardMaterial({ color: 0x5a3a1e, roughness: 0.8 }),
+        steel: new THREE.MeshStandardMaterial({ color: 0xa3abb2, roughness: 0.35, metalness: 0.7 }),
+        fletch: new THREE.MeshStandardMaterial({ color: 0xb33a2c, roughness: 0.8, side: THREE.DoubleSide }),
+      };
+      // Props held in a hand stay upright in the figure plane; keepUpright() undoes the arm rotation each frame.
+      function addShield(f) {
+        const P = PARTS[f.army].shield;
+        const g = new THREE.Group();
+        g.add(card(f.army, "shield", [P.w / 2, P.h / 2], -0.01));
+        g.scale.setScalar(1.05);
+        f.armL.end.add(g);
+        f.shield = g;
+      }
+      function addSword(f) {
+        const P = PARTS.red.weapon;
+        const g = new THREE.Group();
+        g.add(card("red", "weapon", [P.w / 2, P.h * 0.13], 0.004));
+        g.scale.setScalar(1.25);
+        g.rotation.z = Math.PI / 2 - 0.15; // blade points forward from the fist
+        f.armR.end.add(g);
+      }
+      function addSpear(f) {
+        const P = PARTS.yellow.weapon;
+        const g = new THREE.Group();
+        g.add(card("yellow", "weapon", [P.w / 2, P.h * 0.62], 0.004));
+        g.scale.setScalar(3.9);
+        f.armR.end.add(g);
+        return g;
+      }
+      function addBow(f) {
+        const R = 0.55;
+        const bow = new THREE.Group();
+        const arc = meshOf(new THREE.TorusGeometry(R, 0.018, 5, 20, 2.0), MAT.wood);
+        arc.rotation.z = -Math.PI / 2 - 1.0;
+        arc.position.y = R - 0.06;
+        bow.add(arc);
+        f.armL.end.add(bow);
+        f.bowTips = [new THREE.Object3D(), new THREE.Object3D()];
+        f.bowTips[0].position.set(R * Math.sin(1.0), R - 0.06 - R * Math.cos(1.0), 0);
+        f.bowTips[1].position.set(-R * Math.sin(1.0), R - 0.06 - R * Math.cos(1.0), 0);
+        bow.add(...f.bowTips);
+        const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]);
+        f.string = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xeee2c8 }));
+        f.string.frustumCulled = false;
+        scene.add(f.string);
+      }
+      function makeArrow() {
+        const g = new THREE.Group();
+        const shaft = meshOf(new THREE.CylinderGeometry(0.014, 0.014, 0.8, 5), MAT.wood);
+        shaft.rotation.x = Math.PI / 2;
+        const tip = meshOf(new THREE.ConeGeometry(0.03, 0.09, 6), MAT.steel);
+        tip.rotation.x = Math.PI / 2;
+        tip.position.z = 0.44;
+        g.add(shaft, tip);
+        for (const s of [0, Math.PI / 2]) {
+          const fl = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.15), MAT.fletch);
+          fl.position.z = -0.33;
+          fl.rotation.set(Math.PI / 2, s, 0);
+          g.add(fl);
+        }
+        g.scale.setScalar(1.8);
+        scene.add(g);
+        return g;
+      }
+
+      // ---------- armies ----------
+      // Left (red) faces +x, right (yellow) is mirrored to face -x. Lanes run along z (depth).
+      const LANES = 12;
+      const laneZ = (c, seed) => (c - (LANES - 1) / 2) * 1.15 + (rand(seed) - 0.5) * 0.18;
+      const CLASH = 5.2;
+      const units = [];
+      let uid = 0;
+
+      function unit(type, side, row, c) {
+        uid++;
+        const f = makeFigure(side > 0 ? "red" : "yellow");
+        const u = { f, type, side, row, c, id: uid, ph: rand(uid * 7) * 6, z: laneZ(c, c * 31 + row * 7 + (side > 0 ? 0 : 1)) };
+        f.root.scale.x = side;
+        if (type === "archer") addBow(f);
+        if (type === "sword") {
+          addShield(f);
+          addSword(f);
+        }
+        if (type === "spear") {
+          addShield(f);
+          u.spear = addSpear(f);
+        }
+        units.push(u);
+        return u;
+      }
+
+      // Left archers
+      for (let r = 0; r < 2; r++)
+        for (let c = 0; c < LANES; c++) {
+          const u = unit("archer", 1, r, c);
+          u.x0 = -14.5 - r * 1.2 + (rand(u.id) - 0.5) * 0.2;
+          u.o = rand(u.id + 5) * 0.25;
+          u.rel = 1.15 + u.o;
+          u.arrow = makeArrow();
+        }
+      // Left swordsmen and right spearmen
+      for (let r = 0; r < 3; r++)
+        for (let c = 0; c < LANES; c++) {
+          const u = unit("sword", 1, r, c);
+          u.x0 = -8.6 - r * 1.3;
+          u.xc = -0.8 - r * 1.35;
+          u.t0 = 3.0 + r * 0.12 + rand(u.id) * 0.2;
+        }
+      for (let r = 0; r < 4; r++)
+        for (let c = 0; c < LANES; c++) {
+          const u = unit("spear", -1, r, c);
+          u.x0 = 9.4 + r * 1.3;
+          u.xc = 0.8 + r * 1.35;
+          u.t0 = 2.65 + r * 0.1 + rand(u.id) * 0.2;
+        }
+
+      // Front-row duels: pair left/right by lane, alternate strikes, a few fall.
+      const front = (side, c) => units.find((u) => u.side === side && u.row === 0 && u.c === c && u.type !== "archer");
+      for (let c = 0; c < LANES; c++) {
+        const L = front(1, c),
+          R = front(-1, c);
+        L.z = R.z;
+        const P = 1.05 + rand(c + 700) * 0.35;
+        L.P = R.P = P;
+        L.off = rand(c + 800);
+        R.off = L.off + 0.5;
+        L.foe = R;
+        R.foe = L;
+        const roll = rand(c + 900);
+        if (roll < 0.42) R.dieAt = 6.2 + rand(c + 950) * 2.8;
+        else if (roll < 0.62) L.dieAt = 6.6 + rand(c + 960) * 2.6;
+      }
+
+      // ---------- movement ----------
+      // Charge: ease-in to running speed, slight decel into contact. Returns x and normalized speed.
+      function chargeX(u, t) {
+        const t1 = CLASH + (u.row ? 0.25 * u.row : 0);
+        const k = seg(t, u.t0, t1);
+        const s = k < 0.3 ? (k * k) / 0.6 : k < 0.9 ? 0.15 + (k - 0.3) * 1.18 : 0.858 + (1 - Math.pow(1 - (k - 0.9) / 0.1, 2)) * 0.142;
+        const x = lerp(u.x0, u.xc, s);
+        const dsdk = k < 0.3 ? k / 0.3 : k < 0.9 ? 1.18 : 2 * (1 - (k - 0.9) / 0.1) * 1.42;
+        const speed = k > 0 && k < 1 ? (Math.abs(u.xc - u.x0) * dsdk) / (t1 - u.t0) : 0;
+        return { x, speed, dist: Math.abs(x - u.x0) };
+      }
+
+      // ---------- poses ----------
+      const STANCE = { lL1: 0.32, lL2: -0.22, lR1: -0.32, lR2: -0.08 };
+      function gait(dist, amp) {
+        const ph = (2 * Math.PI * dist) / 1.55;
+        const s = Math.sin(ph),
+          c = Math.cos(ph);
+        return {
+          lL1: 0.08 + 0.8 * amp * s,
+          lL2: -0.15 - 1.3 * amp * Math.max(0, c),
+          lR1: 0.08 - 0.8 * amp * s,
+          lR2: -0.15 - 1.3 * amp * Math.max(0, -c),
+          lean: 0.05 + 0.28 * amp,
+          bob: 0.05 * amp * Math.abs(c),
+        };
+      }
+
+      function archerPose(u, t) {
+        const idle = { lean: 0.03 + 0.012 * Math.sin(t * 2 + u.ph), tilt: 0, aL1: 0.3, aL2: 0.3, aR1: 0.05, aR2: 0.2, lL1: 0.12, lL2: 0, lR1: -0.12, lR2: 0 };
+        const AIM = Math.PI / 2 + 0.7;
+        const d = Math.pow(seg(t, 0.55 + u.o, 1.05 + u.o), 0.75);
+        const aim = { lean: -0.1, tilt: -0.4, aL1: AIM, aL2: 0, aR1: lerp(AIM, -0.7, d), aR2: lerp(0, 2.82, d), lL1: 0.32, lL2: -0.05, lR1: -0.3, lR2: 0 };
+        let p = mixPose(idle, aim, smooth(seg(t, 0.15 + u.o, 0.55 + u.o)));
+        if (t >= u.rel) {
+          const r = easeOut(seg(t, u.rel, u.rel + 0.25));
+          p = Object.assign({}, aim, { aR1: lerp(-0.7, -1.2, r), aR2: lerp(2.82, 0.6, r) });
+          p = mixPose(p, idle, smooth(seg(t, 2.2 + u.o, 2.9 + u.o)));
+        }
+        return p;
+      }
+
+      function guardArms(type) {
+        return type === "sword" ? { aL1: 0.75, aL2: 0.9, aR1: 0.55, aR2: 1.0 } : { aL1: 0.75, aL2: 0.9, aR1: 0.45, aR2: 1.05 };
+      }
+      // strike phase u in [0,1): windup → strike (0.35–0.5) → recover
+      function strikeArms(type, k) {
+        const g = guardArms(type);
+        if (type === "sword") {
+          const up = { aR1: Math.PI - 0.25, aR2: 0.35 },
+            down = { aR1: 1.0, aR2: 0.15 };
+          if (k < 0.35) return Object.assign({}, g, mixPose({ aR1: g.aR1, aR2: g.aR2 }, up, smooth(k / 0.35)));
+          if (k < 0.5) return Object.assign({}, g, mixPose(up, down, easeIn((k - 0.35) / 0.15)));
+          return Object.assign({}, g, mixPose(down, { aR1: g.aR1, aR2: g.aR2 }, smooth((k - 0.5) / 0.5)));
+        }
+        const back = { aR1: 0.05, aR2: 1.45 },
+          out = { aR1: 1.35, aR2: 0.12 };
+        if (k < 0.35) return Object.assign({}, g, mixPose({ aR1: g.aR1, aR2: g.aR2 }, back, smooth(k / 0.35)));
+        if (k < 0.5) return Object.assign({}, g, mixPose(back, out, easeOut((k - 0.35) / 0.15)));
+        return Object.assign({}, g, mixPose(out, { aR1: g.aR1, aR2: g.aR2 }, smooth((k - 0.5) / 0.5)));
+      }
+      const phaseOf = (u, t) => ((((t - CLASH) / u.P + u.off) % 1) + 1) % 1;
+      const fighting = (u, t) => u.foe && t > CLASH + 0.15 && !(u.dieAt && t >= u.dieAt) && !(u.foe.dieAt && t >= u.foe.dieAt);
+
+      function infantry(u, t) {
+        const m = chargeX(u, t);
+        const amp = Math.min(1, m.speed / 4.2);
+        const gt = gait(m.dist, amp);
+        let p = Object.assign({ tilt: 0, lift: gt.bob, fall: 0 }, gt, guardArms(u.type));
+        let x = m.x;
+
+        // right army lifts shields during the arrow volley, then lowers before advancing
+        if (u.type === "spear" && t < 3) {
+          const raise = smooth(seg(t, 1.25 + u.row * 0.06, 1.6 + u.row * 0.06)) * (1 - smooth(seg(t, 2.35, 2.75)));
+          const up = u.row === 0 ? { aL1: 1.5, aL2: 0.2, lL1: 0.5, lL2: -0.7, lR1: -0.3, lR2: -0.45, lean: 0.2 } : { aL1: Math.PI - 0.2, aL2: 0.15, lL1: 0.42, lL2: -0.6, lR1: -0.28, lR2: -0.4, lean: 0.1 };
+          p = mixPose(p, up, raise);
+        }
+        // settle into a fighting stance after contact
+        const settle = smooth(seg(t, CLASH - 0.1, CLASH + 0.35));
+        p = mixPose(p, Object.assign({ lean: 0.18 + 0.02 * Math.sin(t * 3 + u.ph) }, STANCE), settle);
+
+        if (fighting(u, t)) {
+          const k = phaseOf(u, t),
+            kf = phaseOf(u.foe, t);
+          p = Object.assign(p, strikeArms(u.type, k));
+          const lunge = k > 0.3 && k < 0.6 ? Math.sin(((k - 0.3) / 0.3) * Math.PI) : 0;
+          const hit = kf > 0.4 && kf < 0.7 ? Math.sin(((kf - 0.4) / 0.3) * Math.PI) : 0;
+          p.lean += 0.22 * lunge - 0.12 * hit;
+          x += u.side * (0.28 * lunge - 0.16 * hit);
+          // block: shield up while the foe swings
+          const blk = kf > 0.25 && kf < 0.6 ? Math.sin(((kf - 0.25) / 0.35) * Math.PI) : 0;
+          p.aL1 = lerp(p.aL1, 1.6, blk);
+          p.aL2 = lerp(p.aL2, 0.35, blk);
+        } else if (u.row > 0 && t > CLASH) {
+          // rear ranks press in, shields up, weapons ready
+          p.aL1 = 1.2;
+          p.aL2 = 0.55;
+          x += u.side * 0.12 * Math.sin(t * 2.3 + u.ph);
+        }
+        if (u.foe && u.foe.dieAt && t > u.foe.dieAt + 0.3) {
+          // winner steps over a little and lowers the weapon
+          const w = smooth(seg(t, u.foe.dieAt + 0.3, u.foe.dieAt + 1.0));
+          p = mixPose(p, Object.assign({}, guardArms(u.type), { lean: 0.08 }, STANCE), w);
+        }
+        if (u.dieAt && t >= u.dieAt) {
+          const k = seg(t, u.dieAt, u.dieAt + 0.55);
+          const fallA = (Math.PI / 2 - 0.08) * easeIn(k) + 0.06 * Math.sin(seg(t, u.dieAt + 0.55, u.dieAt + 0.8) * Math.PI);
+          const limp = { lean: -0.15, tilt: -0.3, aL1: 2.1, aL2: 0.3, aR1: 2.5, aR2: 0.4, lL1: 0.15, lL2: -0.2, lR1: -0.05, lR2: -0.4, lift: 0 };
+          p = mixPose(p, limp, smooth(k * 1.4));
+          p.fall = fallA;
+          x -= u.side * 0.25 * easeOut(k);
+        }
+        // spears: upright → lowered for the charge (front two ranks)
+        if (u.spear) {
+          const target = u.row === 0 ? 1.4 : u.row === 1 ? 1.15 : 0.35;
+          const lower = smooth(seg(t, 3.4 + u.row * 0.1, 4.2 + u.row * 0.1));
+          u.spearTilt = target * lower;
+        }
+        return { p, x };
+      }
+
+      // ---------- arrow volley ----------
+      const GRAV = new THREE.Vector3(0, -9.8, 0);
+      const Z = new THREE.Vector3(0, 0, 1);
+      const tmp = new THREE.Vector3();
+      for (const u of units.filter((u) => u.type === "archer")) {
+        u.f.root.position.set(u.x0, 0, u.z);
+        applyPose(u.f, archerPose(u, u.rel - 0.001));
+        u.f.root.updateMatrixWorld(true);
+        const start = u.f.armR.end.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0.4, 0, 0));
+        const target = new THREE.Vector3(6.2 + rand(u.id + 40) * 3.4, 0.12, u.z + (rand(u.id + 41) - 0.5) * 2);
+        const F = 1.85 + rand(u.id + 42) * 0.3;
+        u.start = start;
+        u.F = F;
+        u.v = target.clone().sub(start).addScaledVector(GRAV, -0.5 * F * F).divideScalar(F);
+      }
+      function placeArrow(u, t) {
+        if (t < 0.6 + u.o) {
+          u.arrow.visible = false;
+          return;
+        }
+        u.arrow.visible = true;
+        if (t < u.rel) {
+          u.f.armR.end.getWorldPosition(tmp);
+          const bowHand = u.f.armL.end.getWorldPosition(new THREE.Vector3());
+          const dir = bowHand.sub(tmp).normalize();
+          u.arrow.position.copy(tmp).addScaledVector(dir, 0.42);
+          u.arrow.quaternion.setFromUnitVectors(Z, dir);
+          return;
+        }
+        const tau = Math.min(t - u.rel, u.F);
+        const p = u.start.clone().addScaledVector(u.v, tau).addScaledVector(GRAV, 0.5 * tau * tau);
+        const dir = u.v.clone().addScaledVector(GRAV, tau).normalize();
+        if (t - u.rel >= u.F) p.addScaledVector(dir, 0.22);
+        u.arrow.position.copy(p);
+        u.arrow.quaternion.setFromUnitVectors(Z, dir);
+      }
+
+      // ---------- banners ----------
+      const banners = [];
+      function banner(x, z, mat) {
+        const pole = meshOf(new THREE.CylinderGeometry(0.035, 0.035, 4.4, 6), MAT.wood);
+        pole.position.set(x, 2.2, z);
+        scene.add(pole);
+        const geo = new THREE.PlaneGeometry(1.5, 0.95, 16, 8);
+        geo.translate(0.75, 0, 0);
+        const cloth = meshOf(geo, mat.clone());
+        cloth.material.side = THREE.DoubleSide;
+        cloth.position.set(x, 3.8, z);
+        scene.add(cloth);
+        banners.push({ cloth, base: Float32Array.from(geo.attributes.position.array), ph: z });
+      }
+      banner(-15.5, -4.5, MAT.red);
+      banner(-15.5, 4.5, MAT.red);
+      banner(16.5, -4.8, MAT.ochre);
+      banner(16.5, 4.8, MAT.ochre);
+      function waveBanners(t) {
+        for (const b of banners) {
+          const pos = b.cloth.geometry.attributes.position;
+          for (let i = 0; i < pos.count; i++) {
+            const x = b.base[i * 3],
+              y = b.base[i * 3 + 1],
+              k = x / 1.5;
+            pos.setZ(i, k * (0.2 * Math.sin(x * 3.2 - t * 5 + b.ph) + 0.05 * Math.sin(y * 4 + t * 3)));
+            pos.setY(i, y - k * k * 0.1);
+          }
+          pos.needsUpdate = true;
+          b.cloth.geometry.computeVertexNormals();
+        }
+      }
+
+      // ---------- camera: wide tableau, near-static slow push ----------
+      function cameraAt(t) {
+        const u = smooth(t / DUR);
+        camera.position.set(lerp(-1.6, 0.6, u), lerp(21, 18.5, u), lerp(24.5, 21.5, u));
+        camera.lookAt(lerp(-1.4, 0.4, u), 0.3, lerp(-1.2, -0.6, u));
+      }
+
+      // ---------- frame ----------
+      function renderAt(t) {
+        for (const u of units) {
+          if (u.type === "archer") {
+            u.f.root.position.set(u.x0, 0, u.z);
+            applyPose(u.f, archerPose(u, t));
+          } else {
+            const { p, x } = infantry(u, t);
+            u.f.root.position.set(x, 0, u.z);
+            applyPose(u.f, p);
+            if (u.spear) u.spear.rotation.z = -(p.aR1 + p.aR2) - (u.spearTilt || 0);
+            if (u.f.shield) u.f.shield.rotation.z = -(p.aL1 + p.aL2);
+          }
+        }
+        scene.updateMatrixWorld(true);
+        for (const u of units) if (u.arrow) placeArrow(u, t);
+        // bow strings: pulled to the draw hand while drawing, straight otherwise
+        const tA = new THREE.Vector3(),
+          tB = new THREE.Vector3(),
+          sp = new THREE.Vector3();
+        for (const u of units) {
+          if (!u.f.string) continue;
+          u.f.bowTips[0].getWorldPosition(tA);
+          u.f.bowTips[1].getWorldPosition(tB);
+          if (t > 0.6 + u.o && t < u.rel) u.f.armR.end.getWorldPosition(sp);
+          else sp.copy(tA).add(tB).multiplyScalar(0.5);
+          const arr = u.f.string.geometry.attributes.position;
+          arr.setXYZ(0, tA.x, tA.y, tA.z);
+          arr.setXYZ(1, sp.x, sp.y, sp.z);
+          arr.setXYZ(2, tB.x, tB.y, tB.z);
+          arr.needsUpdate = true;
+        }
+        waveBanners(t);
+        cameraAt(t);
+        renderer.setRenderTarget(null);
+        renderer.clear(true, true, true);
+        renderer.render(scene, camera);
+      }
+
+      window.addEventListener("hf-seek", (e) => renderAt(e.detail.time));
+      renderAt(window.__hfThreeTime || 0);
+    </script>
+  </body>
+</html>

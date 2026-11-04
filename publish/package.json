@@ -1,0 +1,15 @@
+{
+  "name": "studio-publish",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lệnh đăng / số liệu YouTube và Facebook của studio (publish/README.md).",
+  "type": "commonjs",
+  "dependencies": {
+    "@googleapis/youtube": "^40.0.1",
+    "@googleapis/youtubeanalytics": "^11.0.1",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>{{TITLE}}</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+{{FONTCSS}}
+      html,
+      body {
+        margin: 0;
+        background: #0e0a06;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0e0a06;
+        font-family: "Lora", serif;
+      }
+      .scene,
+      .fade {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+      }
+      .scene img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      /* film look over every picture: vignette and a warm top/bottom shade for the text */
+      #shade {
+        position: absolute;
+        inset: 0;
+        z-index: 50;
+        pointer-events: none;
+        background:
+          radial-gradient(ellipse 85% 70% at 50% 48%, rgba(0, 0, 0, 0) 55%, rgba(8, 5, 2, 0.55) 100%),
+          linear-gradient(180deg, rgba(10, 6, 3, 0.82) 0%, rgba(10, 6, 3, 0.35) 22%, rgba(10, 6, 3, 0) 32%,
+            rgba(10, 6, 3, 0) 52%, rgba(10, 6, 3, 0.55) 66%, rgba(10, 6, 3, 0.6) 76%, rgba(10, 6, 3, 0.2) 90%);
+      }
+      #head {
+        position: absolute;
+        left: 70px;
+        right: 70px;
+        top: 190px;
+        z-index: 60;
+        text-align: center;
+        color: #f6ecd2;
+      }
+      #head .kicker {
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: 0.24em;
+        color: #e3a35a;
+      }
+      #head .title {
+        margin-top: 12px;
+        font-size: 70px;
+        font-weight: 700;
+        line-height: 1.12;
+        text-wrap: balance;
+        text-shadow: 0 4px 22px rgba(0, 0, 0, 0.75);
+      }
+      #head em,
+      .cap em {
+        font-style: normal;
+        color: #ffd25a;
+      }
+      .cap {
+        position: absolute;
+        left: 80px;
+        right: 120px;
+        top: 1180px;
+        height: 260px;
+        z-index: 70;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .cap-in {
+        text-align: center;
+        font-size: 64px;
+        font-weight: 700;
+        line-height: 1.22;
+        text-wrap: balance;
+        color: #fffaf0;
+        text-shadow: 0 0 3px #000, 0 4px 16px rgba(0, 0, 0, 0.9);
+      }
+      .stamp {
+        position: absolute;
+        left: 0;
+        top: 560px;
+        z-index: 65;
+      }
+      .stamp-in {
+        padding: 14px 34px 18px 30px;
+        border-left: 12px solid #b8452f;
+        border-radius: 0 10px 10px 0;
+        background: rgba(246, 236, 210, 0.95);
+        color: #2a1c0e;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+      }
+      .stamp .year {
+        font-size: 74px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .stamp .place {
+        margin-top: 6px;
+        font-size: 34px;
+        font-weight: 600;
+        color: #5b4630;
+      }
+      .endline {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 1500px;
+        z-index: 70;
+        text-align: center;
+        font-size: 36px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        color: #e3c896;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="{{DURATION}}">
+      {{BODY}}
+      <div id="shade"></div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      {{TIMELINE}}
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

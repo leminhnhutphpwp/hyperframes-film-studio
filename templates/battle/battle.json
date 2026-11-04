@@ -1,0 +1,38 @@
+{
+ "duration": 10,
+ "terrain": "dong-co-on-doi",
+ "lanes": 12,
+ "clash": 5.2,
+ "props": "vu-khi-chung",
+ "sides": [
+  {
+   "colour": "blue",
+   "heads": "chau-au-trung-dai",
+   "commander": "chau-au-trung-dai-tuong",
+   "ranks": [
+    "chau-au-trung-dai-bo-binh-nang",
+    "chau-au-trung-dai-bo-binh-nang",
+    "chau-au-trung-dai-bo-binh-nang",
+    "chau-au-trung-dai-cung-thu",
+    "chau-au-trung-dai-cung-thu"
+   ],
+   "volley": 0.6,
+   "advance": 3.0,
+   "losses": 0.2
+  },
+  {
+   "colour": "red",
+   "heads": "chau-au-trung-dai",
+   "commander": "chau-au-trung-dai-tuong",
+   "ranks": [
+    "chau-au-trung-dai-bo-binh-nang",
+    "chau-au-trung-dai-bo-binh-nang",
+    "chau-au-trung-dai-bo-binh-nang",
+    "chau-au-trung-dai-bo-binh-nang"
+   ],
+   "volley": null,
+   "advance": 2.6,
+   "losses": 0.42
+  }
+ ]
+}

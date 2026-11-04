@@ -1,0 +1,40 @@
+# Python env (recreate: docs/setup.md)
+.venv/
+__pycache__/
+
+# Node / HyperFrames build output
+node_modules/
+.hyperframes/
+renders/
+snaps/
+probe/
+out/
+out-render*.log
+render.log
+tts.log
+
+# Drawing logs and rig-test data (tools/anim_frames.py, tools/rigtest.py)
+library/logs/
+library/anims/*.log
+templates/film/rigtest/lib.js
+
+# Secrets: API keys, OAuth client, YouTube / Facebook tokens. Never commit.
+.env
+secrets/
+
+# Local runtimes: TTS venvs and voice models (docs/setup.md)
+runtime/
+
+# Audio you add to the sound library (keep a note of each file's source and licence)
+library/sfx/**/*.wav
+library/sfx/**/*.mp3
+library/sfx/**/*.ogg
+library/sfx/**/*.flac
+library/sfx/**/*.m4a
+
+# Your own films and builds
+projects/*/*/build/
+projects/*/*/out-render*.log
+archive/
+
+.DS_Store
