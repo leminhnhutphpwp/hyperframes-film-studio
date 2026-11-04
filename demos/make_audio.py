@@ -1,7 +1,8 @@
 """Make every sound the demos use: narration with Kokoro TTS, music beds and effects with tools/synth_audio.py.
 
   runtime/venv-kokoro/bin/python demos/make_audio.py            all demos
-  runtime/venv-kokoro/bin/python demos/make_audio.py voices     one demo (voices, daily-life, explainer, animals, stickman)
+  runtime/venv-kokoro/bin/python demos/make_audio.py voices     one demo (voices, daily-life, explainer, animals, stickman,
+                                                                battle = samples/battle-paper)
 
 Needs the Kokoro runtime from docs/setup.md (runtime/venv-kokoro with kokoro-onnx, soundfile, numpy, scipy,
 imageio-ffmpeg, and the model in runtime/models/kokoro). For each demo it writes
@@ -89,8 +90,8 @@ def audio_tag(id, src, start, dur, vol, track, fade=0.3):
             f"data-track-index=\"{track}\" data-automation='{auto}'></audio>")
 
 
-def write(demo, narration, tags, extra=None):
-    d = DEMOS / demo
+def write(demo, narration, tags, extra=None, base=DEMOS):
+    d = base / demo
     js = "// written by demos/make_audio.py: when each narrated line starts and how long it lasts (seconds)\n"
     js += f"window.NARRATION = {json.dumps(narration, ensure_ascii=False, indent=1)};\n"
     if extra:
@@ -218,7 +219,18 @@ def stickman():
     write("stickman", [], tags)
 
 
-ALL = {"voices": voices, "daily-life": daily_life, "explainer": explainer, "animals": animals, "stickman": stickman}
+def battle():
+    """samples/battle-paper: an oud bed under the whole battle, swords and shields from the clash (CLASH = 5.2 s)."""
+    sr = synth_audio.SR
+    d = ROOT / "samples/battle-paper/assets/audio"
+    oud = synth_audio.oud(11)
+    t_oud = audio_tag("bed-oud", "assets/audio/oud-bed.m4a", 0, to_m4a(oud, sr, d / "oud-bed.m4a", peak=0.7) - 1, 0.45, 3, fade=0.8)
+    L, R = synth_audio.melee(6)
+    t_melee = audio_tag("melee", "assets/audio/melee.m4a", 4.9, to_m4a(np.stack([L, R], axis=1), sr, d / "melee.m4a"), 0.9, 2, fade=0.4)
+    write("battle-paper", [], [t_oud, t_melee], base=ROOT / "samples")
+
+
+ALL = {"voices": voices, "daily-life": daily_life, "explainer": explainer, "animals": animals, "stickman": stickman, "battle": battle}
 
 if __name__ == "__main__":
     for name in sys.argv[1:] or ALL:

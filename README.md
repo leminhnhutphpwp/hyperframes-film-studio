@@ -17,54 +17,50 @@ renders with one command.
 
 ## Demos
 
-Every clip below was rendered from this repository with `npx hyperframes render`, sound included: narration from local
-TTS, music and effects generated in code.
+Every video was rendered from this repository with `npx hyperframes render`, sound included. Each one is a folder you can
+render yourself.
 
-**Demo reel with sound (68 s)**: the example film, voices, a narrated Short and explainer, animals, stick figures and
-a battle.
+### History film · [`examples/ides-of-march`](examples/ides-of-march)
 
-https://github.com/user-attachments/assets/24ab1e43-9485-478e-b8ab-608496543135
-
-<details>
-<summary><b>More clips with sound</b>: history film, voices, daily-life Short, explainer</summary>
-
-**History film** (`examples/ides-of-march`): English narration, the soothsayer's warning and the Ides of March.
+Paper puppets, fog, colour grades and a layered painted close-up, narrated in English with Kokoro. This is the example film: `bash examples/ides-of-march/build.sh` renders it.
 
 https://github.com/user-attachments/assets/939692d5-4cea-41df-b6bc-0f9a4a141c5a
 
-**Voices** (`demos/voices`): Kokoro English voices and a Vietnamese VieNeu voice.
+### Voices · [`demos/voices`](demos/voices)
 
-https://github.com/user-attachments/assets/6c648f4a-2f49-451c-996e-793c90c6cf0b
+Five English voices (Kokoro) and a Vietnamese one (VieNeu-TTS), all running locally. Each line lights up as it is spoken over a waveform of the real recording.
 
-**Daily-life Short** (`demos/daily-life`): 9:16, narrated, captions that follow the voice.
+https://github.com/user-attachments/assets/1aced6d0-6740-40a6-b056-32e775dc3764
+
+### Daily-life Short · [`demos/daily-life`](demos/daily-life)
+
+A vertical 9:16 Short: painted everyday scenes, slow camera moves, narration and captions that follow the voice word by word.
 
 https://github.com/user-attachments/assets/1eb214c5-1a4e-4326-afec-ca8a65c01e15
 
-**Explainer** (`demos/explainer`): the chart moves with the narration.
+### Explainer · [`demos/explainer`](demos/explainer)
+
+Kinetic type and data: a typed headline, bars that grow and numbers that count up, all timed to the narration.
 
 https://github.com/user-attachments/assets/06244742-8e77-46f1-b869-0723feb7340e
 
-</details>
+### Animals · [`demos/animals`](demos/animals)
 
-The GIFs below loop silently so the page loads fast:
+Elephants and horses drawn once and played as whole-body walk and gallop cycles, with a lyre music bed generated in code.
 
-<table>
-  <tr>
-    <td width="50%"><img src="docs/media/history-film.gif" alt="Paper cut-out history film: the Ides of March" /><br /><b>History film</b>: paper puppets, fog, colour grades and a layered painted close-up, narrated in English (<code>examples/ides-of-march</code>)</td>
-    <td width="50%"><img src="docs/media/battle.gif" alt="Battle map with cavalry flanking" /><br /><b>Battle map</b>: hundreds of puppets, flanking arrows, a moving camera (<code>tools/battle.py</code>)</td>
-  </tr>
-  <tr>
-    <td><img src="docs/media/animals.gif" alt="Elephants and horses walking and galloping" /><br /><b>Animals</b>: drawn once, played as whole-body walk and gallop cycles (<code>demos/animals</code>)</td>
-    <td><img src="docs/media/stickman.gif" alt="Stick figures playing football" /><br /><b>Stick figures</b>: every pose is code, no image assets (<code>demos/stickman</code>)</td>
-  </tr>
-  <tr>
-    <td><img src="docs/media/explainer.gif" alt="Animated bar chart explainer" /><br /><b>Explainer</b>: typed headline, growing bars, counting numbers (<code>demos/explainer</code>)</td>
-    <td align="center"><img src="docs/media/daily-life.gif" alt="Vertical Short with word-by-word captions" height="420" /><br /><b>Daily-life Short</b>: 9:16, narrated, captions that follow the voice word by word (<code>demos/daily-life</code>)</td>
-  </tr>
-  <tr>
-    <td colspan="2"><img src="docs/media/voices.gif" alt="Voice showcase with waveforms" /><br /><b>Voices</b>: five English voices (Kokoro) and a Vietnamese one (VieNeu), all running locally (<code>demos/voices</code>)</td>
-  </tr>
-</table>
+https://github.com/user-attachments/assets/cc67c6b0-76ea-44fc-a5aa-e1026f712fa1
+
+### Stick figures · [`demos/stickman`](demos/stickman)
+
+Two stick figures animated from joint angles only, no image assets, with whoosh, kick, bonk and cheer effects generated in code.
+
+https://github.com/user-attachments/assets/fe6f797a-54a3-4819-8de1-00685b3f6890
+
+### Battle map · [`samples/battle-paper`](samples/battle-paper)
+
+Hundreds of paper puppets on a terrain map, with swords, shields and an oud, all synthesized.
+
+https://github.com/user-attachments/assets/4fb1193c-eb33-456f-bbf0-06df39309c69
 
 ## What's in the box
 

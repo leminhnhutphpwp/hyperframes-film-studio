@@ -14,7 +14,8 @@ cd demos/<name> && npx --yes hyperframes@0.8.152 render
 | [`daily-life/`](daily-life/) | A vertical Short: painted everyday scenes with slow camera moves, crossfades, English narration and captions that follow the voice | 1080×1920, 8.5 s |
 | [`explainer/`](explainer/) | An explainer beat: typed headline, bars that grow, numbers that count up, a row of people filled in by the result, all timed to the narration | 1920×1080, 10 s |
 
-The history film in the main README is `examples/ides-of-march`; the battle clips come from `tools/battle.py`.
+The history film in the main README is `examples/ides-of-march`; the battle is `samples/battle-paper` (built with
+`tools/battle.py`), which has its own oud bed and sword-and-shield sound.
 
 ## Sound
 
@@ -23,7 +24,7 @@ different lines), set up Kokoro (`bash scripts/setup.sh --kokoro`) and run:
 
 ```bash
 runtime/venv-kokoro/bin/python demos/make_audio.py              # every demo
-runtime/venv-kokoro/bin/python demos/make_audio.py explainer    # one demo
+runtime/venv-kokoro/bin/python demos/make_audio.py explainer    # one demo (or battle, for samples/battle-paper)
 ```
 
 It writes `assets/audio/*.m4a` and `assets/audio/timing.js` (when each line is spoken) and rewrites the `<audio>` tags
