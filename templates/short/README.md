@@ -9,7 +9,7 @@ lives in `projects/<channel>/<short-name>/`.
 P=projects/<channel>/<name>
 # 1. source/facts.md (one source per detail) → narration.vi.txt ("NNN sentences", blank line = paragraph break) — get it approved before recording
 runtime/venv-vieneu/bin/python tools/tts_vieneu.py $P/narration.vi.txt $P/audio/vi-story --voice "Hải Đăng"
-.venv/bin/python -I tools/assemble_narration.py $P/narration.vi.txt $P/audio/vi-story $P/audio/vi-story/loi-ke-toan-bo.m4a --lead 0.3 --gap 0.6
+.venv/bin/python -I tools/assemble_narration.py $P/narration.vi.txt $P/audio/vi-story $P/audio/vi-story/narration.m4a --lead 0.3 --gap 0.6
 # 2. tableaux: $P/tableaux/sNN/tableau.json with "flat": true, "portrait": true → (say how many tableaux first)
 .venv/bin/python -I tools/tableau.py $P/tableaux/s*/tableau.json
 # 3. a self-made music bed (pentatonic zither) — or pick one from library/sfx

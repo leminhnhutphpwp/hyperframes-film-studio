@@ -3,7 +3,7 @@
   .venv/bin/python -I projects/my-channel/caesar/part-3/shared/chapter_build.py projects/my-channel/caesar/part-3/ch01
 
 The chapter directory holds chapter.json + js/scenes.js. This script
-- cuts the chapter's window out of the full narration (audio/vi-story/loi-ke-toan-bo.m4a, timing.json): chapters meet
+- cuts the chapter's window out of the full narration (audio/vi-story/narration.m4a, timing.json): chapters meet
   halfway through the pause between them, so the cut chapters play back to back as the whole film;
 - copies shared/ (engine, map, overlay, fonts) into <chapter>/shared, stages library assets (recoloured) into
   <chapter>/assets/lib, converts the sound effects it names into <chapter>/assets/audio;
@@ -46,11 +46,16 @@ def main(chdir, lang="vi"):
     story = PROJECT / f"audio/{lang}-story"
     LANG = lang
     trf = PROJECT / f"strings.{lang}.json"  # on-screen text: Vietnamese → this language (cues still follow the Vietnamese lines' proportions)
-    TR = json.loads(trf.read_text()) if lang != "vi" and trf.exists() else {}  # narration in this language: timing.json + loi-ke-toan-bo.m4a
+    TR = json.loads(trf.read_text()) if lang != "vi" and trf.exists() else {}  # narration in this language: timing.json + narration.m4a
     chdir = Path(chdir).resolve()
     cfg = json.loads((chdir / "chapter.json").read_text())
     timing = json.loads((story / "timing.json").read_text())
-    text = {int(m.group(1)): m.group(2).strip() for m in (re.match(r"(\d+)\s+(.*)", l) for l in (PROJECT / "narration.vi.txt").read_text(encoding="utf-8").splitlines() if not l.startswith("#")) if m}
+    # the source narration: narration.vi.txt for a Vietnamese-first film (other languages are timed against it and
+    # translated through strings.<lang>.json); a film written straight in one language has only narration.<lang>.txt
+    src = PROJECT / "narration.vi.txt"
+    if not src.exists():
+        src = PROJECT / f"narration.{lang}.txt"
+    text = {int(m.group(1)): m.group(2).strip() for m in (re.match(r"(\d+)\s+(.*)", l) for l in src.read_text(encoding="utf-8").splitlines() if not l.startswith("#")) if m}
     L = {int(n): v for n, v in timing["lines"].items()}
     chs = timing["chapters"]
     k = cfg["chapter"] - 1
@@ -168,7 +173,7 @@ def main(chdir, lang="vi"):
     # narration window and sound effects
     aud = chdir / "assets" / "audio"
     aud.mkdir(parents=True, exist_ok=True)
-    subprocess.run([FF, "-hide_banner", "-loglevel", "error", "-y", "-ss", f"{start:.3f}", "-t", f"{dur:.3f}", "-i", str(story / "loi-ke-toan-bo.m4a"), "-c:a", "aac", "-b:a", "160k", str(aud / "narration.m4a")], check=True)
+    subprocess.run([FF, "-hide_banner", "-loglevel", "error", "-y", "-ss", f"{start:.3f}", "-t", f"{dur:.3f}", "-i", str(story / "narration.m4a" if (story / "narration.m4a").exists() else story / "loi-ke-toan-bo.m4a"), "-c:a", "aac", "-b:a", "160k", str(aud / "narration.m4a")], check=True)
 
     def when(ref):
         n, x = ref
@@ -224,7 +229,9 @@ def main(chdir, lang="vi"):
 
     # data.js and index.html
     (chdir / "js").mkdir(exist_ok=True)
-    proj = json.loads((HERE / "map/out/projection.json").read_text())
+    # map scenes need the projection from tools/map_render.py; a chapter without a map runs without it
+    pj = HERE / "map/out/projection.json"
+    proj = json.loads(pj.read_text()) if pj.exists() else {"layers": []}
     scenes_js = (chdir / "js/scenes.js").read_text()
     # a layer is used when its name appears as a whole word in the scenes ("rome-264": 1, latium: 0.6, …)
     used_layers = [l for l in proj.get("layers", []) if re.search(rf"(?<![\w-]){re.escape(l)}(?![\w-])", scenes_js)]

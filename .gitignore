@@ -38,3 +38,19 @@ projects/*/*/out-render*.log
 archive/
 
 .DS_Store
+
+# Chapter builds made by shared/chapter_build.py (rebuild them; keep chapter.json and js/scenes*.js)
+examples/*/shared/
+examples/*/ch*/shared/
+examples/*/ch*/assets/
+examples/*/ch*/index.html
+examples/*/ch*/hyperframes.json
+examples/*/ch*/package.json
+examples/*/ch*/meta.json
+examples/*/ch*/js/data.js
+projects/*/*/ch*/shared/
+projects/*/*/ch*/assets/
+projects/*/*/ch*/index.html
+projects/*/*/ch*/js/data.js
+# per-paragraph TTS takes (narration.m4a, timing.json and lines.json are kept)
+**/audio/*-story/p[0-9][0-9].wav

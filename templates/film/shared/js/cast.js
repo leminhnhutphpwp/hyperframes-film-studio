@@ -1,6 +1,6 @@
 // Who is who in the film: kit + heads + face for each recurring person, so every chapter draws them the same way.
 // Entry: [kit@colour, heads@colour or null, face or null, scale, options]. This example uses the starter library
-// (the "Ides of March" chapter in templates/film/examples); replace it with your film's people.
+// (the example film in examples/ides-of-march); replace it with your film's people.
 export const POL = "roman-statesman@purple";
 export const CAST = {
   caesarToga: ["roman-senator@purple", POL, "head1", 1.0, { hold: "none" }],

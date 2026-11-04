@@ -13,6 +13,13 @@
   <body>
     <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-width="1920" data-height="1080" data-duration="7">
       <canvas id="stage" width="1920" height="1080"></canvas>
+      <!-- AUDIO:BEGIN -->
+      <audio id="whoosh" src="assets/audio/whoosh.m4a" data-start="1.850" data-duration="0.500" data-track-index="2" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 0.7}, {"t": 0, "v": 0.7}, {"t": 0.5, "v": 0.7}, {"t": 0.5, "v": 0.7}]}]}'></audio>
+      <audio id="kick" src="assets/audio/kick.m4a" data-start="3.280" data-duration="0.500" data-track-index="2" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 1}, {"t": 0, "v": 1}, {"t": 0.5, "v": 1}, {"t": 0.5, "v": 1}]}]}'></audio>
+      <audio id="bonk" src="assets/audio/bonk.m4a" data-start="4.300" data-duration="0.500" data-track-index="2" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 0.8}, {"t": 0, "v": 0.8}, {"t": 0.5, "v": 0.8}, {"t": 0.5, "v": 0.8}]}]}'></audio>
+      <audio id="cheer" src="assets/audio/cheer.m4a" data-start="4.550" data-duration="1.600" data-track-index="2" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 0.6}, {"t": 0, "v": 0.6}, {"t": 1.6, "v": 0.6}, {"t": 1.6, "v": 0.6}]}]}'></audio>
+      <audio id="bed-tranh" src="assets/audio/tranh-bed.m4a" data-start="0.000" data-duration="7.000" data-track-index="3" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 0}, {"t": 0.8, "v": 0.35}, {"t": 6.2, "v": 0.35}, {"t": 7.0, "v": 0}]}]}'></audio>
+      <!-- AUDIO:END -->
     </div>
     <script>
       // No assets at all: two stick figures, a box and a ball, drawn every frame from joint angles.

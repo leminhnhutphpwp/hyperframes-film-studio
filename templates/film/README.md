@@ -1,17 +1,21 @@
 # Paper cut-out film template (latest)
 
-`shared/` is the film build kit for **every new film**: the paper-puppet engine plus the cinematic layer `fx.js`.
-Published films keep their old code; this template only applies from the next film on.
+`shared/` is the film build kit: the paper-puppet engine plus the cinematic layer `fx.js`. Each film keeps its own copy,
+so later changes to the template never alter a finished film.
 
-Starting a new film:
+Starting a new film: copy the example project, which already builds and renders.
 
 ```bash
-mkdir -p projects/<name> && cp -r templates/film/shared projects/<name>/shared
-# edit shared/js/cast.js (the film's characters) and shared/map/spec.json (the map region), then run tools/map_render.py
+cp -r examples/ides-of-march projects/<channel>/<film>
+# edit narration.en.txt, ch01/chapter.json (assets, backdrops, tableaux) and ch01/js/scenes.js, then:
+bash projects/<channel>/<film>/build.sh --voice
 ```
 
-`examples/` — a test chapter, "The Ides of March", using every effect (`ides-scenes.js`, `ides-chapter.json`), plus two
-tableaux (`ides-dao`: 3 layers, `ides-toga`: 1 layer).
+For more chapters, add `# ── <title>` lines to the narration and a `chNN/` folder per chapter. Map scenes need
+`shared/map/spec.json` and `tools/map_render.py`.
+
+A working example that uses every effect lives in `examples/ides-of-march/` (`ch01/js/scenes.js`, `ch01/chapter.json`,
+and two tableaux: `ides-dao` with 3 layers, `ides-toga` with 1). `bash examples/ides-of-march/build.sh` builds and renders it.
 
 ## Cinematic layer — `shared/js/fx.js`
 

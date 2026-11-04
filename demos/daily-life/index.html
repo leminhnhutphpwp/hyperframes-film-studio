@@ -10,10 +10,18 @@
       #stage { position: absolute; inset: 0; }
       .src { display: none; }
     </style>
+    <!-- written by demos/make_audio.py: when each narrated line starts -->
+    <script src="assets/audio/timing.js"></script>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-width="1080" data-height="1920" data-duration="8">
+    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-width="1080" data-height="1920" data-duration="8.45">
       <canvas id="stage" width="1080" height="1920"></canvas>
+      <!-- AUDIO:BEGIN -->
+      <audio id="line1" src="assets/audio/line1.m4a" data-start="0.500" data-duration="2.311" data-track-index="1" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 1}, {"t": 0, "v": 1}, {"t": 2.311, "v": 1}, {"t": 2.311, "v": 1}]}]}'></audio>
+      <audio id="line2" src="assets/audio/line2.m4a" data-start="3.261" data-duration="2.494" data-track-index="1" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 1}, {"t": 0, "v": 1}, {"t": 2.494, "v": 1}, {"t": 2.494, "v": 1}]}]}'></audio>
+      <audio id="line3" src="assets/audio/line3.m4a" data-start="6.205" data-duration="0.998" data-track-index="1" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 1}, {"t": 0, "v": 1}, {"t": 0.998, "v": 1}, {"t": 0.998, "v": 1}]}]}'></audio>
+      <audio id="bed-tranh" src="assets/audio/tranh-bed.m4a" data-start="0.000" data-duration="8.450" data-track-index="3" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 0}, {"t": 0.8, "v": 0.22}, {"t": 7.65, "v": 0.22}, {"t": 8.45, "v": 0}]}]}'></audio>
+      <!-- AUDIO:END -->
     </div>
     <img class="src" id="s1" src="assets/late-for-the-talk.jpg" />
     <img class="src" id="s2" src="assets/man-in-the-doorway.jpg" />
@@ -21,7 +29,8 @@
     <script>
       // A vertical Short in the style of templates/short: painted stills with slow camera moves, crossfades,
       // and captions burned in word by word (Shorts autoplay muted, so the words carry the story).
-      const W = 1080, H = 1920, DUR = 8;
+      const W = 1080, H = 1920, DUR = window.DURATION || 8.5;
+      const N = window.NARRATION || [{ text: "He was late for a talk about kindness.", start: 0.5, dur: 2.2 }, { text: "On the way, a man sat slumped in a doorway.", start: 3.2, dur: 2.5 }, { text: "Would you stop?", start: 6.2, dur: 1 }];
       const ctx = document.getElementById("stage").getContext("2d");
       const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
       const smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
@@ -30,15 +39,13 @@
 
       // shot: image, start, end, camera from/to as [zoom, x offset, y offset]
       const SHOTS = [
-        { id: "s1", a: 0, b: 3.0, from: [1.05, 0, 40], to: [1.18, -50, -10] },
-        { id: "s2", a: 2.6, b: 5.6, from: [1.25, 0, -60], to: [1.08, 0, 30] },
-        { id: "s3", a: 5.2, b: 8.2, from: [1.06, 40, 0], to: [1.16, -30, -20] },
+        // each picture arrives just before its line is spoken
+        { id: "s1", a: 0, b: N[1].start, from: [1.05, 0, 40], to: [1.18, -50, -10] },
+        { id: "s2", a: N[1].start - 0.4, b: N[2].start, from: [1.25, 0, -60], to: [1.08, 0, 30] },
+        { id: "s3", a: N[2].start - 0.4, b: DUR + 0.2, from: [1.06, 40, 0], to: [1.16, -30, -20] },
       ];
-      const LINES = [
-        { a: 0.3, b: 2.6, text: "He was late for a talk about kindness." },
-        { a: 2.9, b: 5.2, text: "On the way, a man sat slumped in a doorway." },
-        { a: 5.5, b: 7.8, text: "Would you stop?" },
-      ];
+      // captions follow the narration: each word pops in as it is spoken
+      const LINES = N.map((l, i) => ({ a: l.start, b: i === N.length - 1 ? DUR - 0.2 : l.start + l.dur + 0.15, text: l.text, said: l.dur }));
 
       function shot(s, t) {
         const u = smooth(seg(t, s.a, s.b));
@@ -72,7 +79,7 @@
           const full = row.join(" ");
           let x = W / 2 - ctx.measureText(full).width / 2;
           for (const w of row) {
-            const appear = l.a + (i / words.length) * (l.b - l.a) * 0.6;
+            const appear = l.a + (i / words.length) * l.said;
             const pop = smooth(seg(t, appear, appear + 0.15));
             const ww = ctx.measureText(w).width;
             const cx = x + ww / 2;
@@ -82,7 +89,7 @@
             ctx.lineWidth = 14; ctx.strokeStyle = "rgba(0,0,0,0.85)"; ctx.lineJoin = "round";
             ctx.strokeText(w, 0, 0);
             // the word being said is yellow, the rest white
-            const now = t >= appear && t < appear + (l.b - l.a) * 0.6 / words.length + 0.1;
+            const now = t >= appear && t < appear + l.said / words.length + 0.05;
             ctx.fillStyle = now ? "#ffd84a" : "#ffffff";
             ctx.fillText(w, 0, 0);
             ctx.restore();

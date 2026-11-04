@@ -9,16 +9,27 @@
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
       #stage { position: absolute; inset: 0; }
     </style>
+    <!-- written by demos/make_audio.py: when each narrated line starts -->
+    <script src="assets/audio/timing.js"></script>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-width="1920" data-height="1080" data-duration="7">
+    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-width="1920" data-height="1080" data-duration="9.99">
       <canvas id="stage" width="1920" height="1080"></canvas>
+      <!-- AUDIO:BEGIN -->
+      <audio id="line1" src="assets/audio/line1.m4a" data-start="0.300" data-duration="1.057" data-track-index="1" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 1}, {"t": 0, "v": 1}, {"t": 1.057, "v": 1}, {"t": 1.057, "v": 1}]}]}'></audio>
+      <audio id="line2" src="assets/audio/line2.m4a" data-start="1.657" data-duration="2.438" data-track-index="1" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 1}, {"t": 0, "v": 1}, {"t": 2.438, "v": 1}, {"t": 2.438, "v": 1}]}]}'></audio>
+      <audio id="line3" src="assets/audio/line3.m4a" data-start="4.395" data-duration="1.972" data-track-index="1" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 1}, {"t": 0, "v": 1}, {"t": 1.972, "v": 1}, {"t": 1.972, "v": 1}]}]}'></audio>
+      <audio id="line4" src="assets/audio/line4.m4a" data-start="6.667" data-duration="1.820" data-track-index="1" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 1}, {"t": 0, "v": 1}, {"t": 1.82, "v": 1}, {"t": 1.82, "v": 1}]}]}'></audio>
+      <audio id="bed-lyre" src="assets/audio/lyre-bed.m4a" data-start="0.000" data-duration="9.990" data-track-index="3" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 0}, {"t": 0.8, "v": 0.12}, {"t": 9.19, "v": 0.12}, {"t": 9.99, "v": 0}]}]}'></audio>
+      <!-- AUDIO:END -->
     </div>
     <script>
       // An explainer beat built from code only: a headline typed on, bars that grow with a little overshoot,
       // numbers that count up, and a row of people filled in by the result.
       // Data: Darley & Batson (1973), share of seminary students who stopped to help, by how hurried they were.
-      const W = 1920, H = 1080, DUR = 7;
+      const W = 1920, H = 1080, DUR = window.DURATION || 10;
+      // narration lines (demos/make_audio.py): headline, no hurry, a little late, in a hurry
+      const N = window.NARRATION || [{ start: 0.3, dur: 1 }, { start: 1.6, dur: 2.4 }, { start: 4.4, dur: 2 }, { start: 6.7, dur: 1.8 }];
       const ctx = document.getElementById("stage").getContext("2d");
       const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
       const smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
@@ -27,9 +38,9 @@
       const back = (x) => { x = clamp(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
       const INK = "#2b2118", RED = "#c2412d", GOLD = "#d99a2b", TEAL = "#2a8c8c";
       const DATA = [
-        { label: "No hurry", value: 63, color: TEAL, at: 1.5 },
-        { label: "A little late", value: 45, color: GOLD, at: 2.0 },
-        { label: "In a hurry", value: 10, color: RED, at: 2.5 },
+        { label: "No hurry", value: 63, color: TEAL, at: N[1].start },
+        { label: "A little late", value: 45, color: GOLD, at: N[2].start },
+        { label: "In a hurry", value: 10, color: RED, at: N[3].start },
       ];
 
       function grain() {
@@ -50,11 +61,11 @@
         grain();
         // headline typed on
         const head = "Who stopped to help?";
-        const n = Math.floor(head.length * seg(t, 0.1, 1.0));
+        const n = Math.floor(head.length * seg(t, N[0].start, N[0].start + N[0].dur));
         ctx.fillStyle = INK; ctx.font = "800 84px Georgia, 'Times New Roman', serif";
         ctx.fillText(head.slice(0, n), 140, 170);
-        if (t < 1.2 && Math.floor(t * 4) % 2 === 0) ctx.fillRect(140 + ctx.measureText(head.slice(0, n)).width + 8, 100, 6, 80);
-        ctx.globalAlpha = smooth(seg(t, 0.9, 1.4));
+        if (t < N[0].start + N[0].dur + 0.2 && Math.floor(t * 4) % 2 === 0) ctx.fillRect(140 + ctx.measureText(head.slice(0, n)).width + 8, 100, 6, 80);
+        ctx.globalAlpha = smooth(seg(t, N[0].start + N[0].dur - 0.3, N[0].start + N[0].dur + 0.2));
         ctx.font = "italic 36px Georgia, serif"; ctx.fillStyle = "#6b5a44";
         ctx.fillText("40 seminary students on their way to give a talk · Darley & Batson, 1973", 142, 226);
         ctx.globalAlpha = 1;
@@ -77,19 +88,19 @@
         });
 
         // the punchline: 1 in 10, as people
-        const p = seg(t, 4.2, 5.0);
+        const P0 = N[3].start + 0.3, p = seg(t, P0, P0 + 0.8);
         if (p > 0) {
           ctx.globalAlpha = smooth(p);
           ctx.fillStyle = INK; ctx.font = "800 54px Georgia, serif";
           ctx.fillText("In a hurry, only 1 in 10 stopped.", 140, 960);
           for (let i = 0; i < 10; i++) {
-            const pop = back(seg(t, 4.4 + i * 0.07, 4.8 + i * 0.07));
-            person(1180 + i * 62, 965 - (1 - pop) * 30, 0.95, i === 0 && t > 5.3 ? RED : "rgba(43,33,24,0.35)");
+            const pop = back(seg(t, P0 + 0.2 + i * 0.07, P0 + 0.6 + i * 0.07));
+            person(1180 + i * 62, 965 - (1 - pop) * 30, 0.95, i === 0 && t > P0 + 1.1 ? RED : "rgba(43,33,24,0.35)");
           }
           ctx.globalAlpha = 1;
         }
         // underline the red bar once the point lands
-        const ul = smooth(seg(t, 5.4, 6.0));
+        const ul = smooth(seg(t, P0 + 1.2, P0 + 1.8));
         if (ul > 0) {
           ctx.strokeStyle = RED; ctx.lineWidth = 8; ctx.lineCap = "round";
           ctx.beginPath(); ctx.ellipse(X0 + 165, Y0 + 2 * (BH + GAP) + BH / 2, 175, 88, -0.04, Math.PI, Math.PI + Math.PI * 2 * ul); ctx.stroke();

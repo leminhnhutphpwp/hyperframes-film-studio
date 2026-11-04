@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Voices: local text-to-speech</title>
+    <style>
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #14110d; }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+      #stage { position: absolute; inset: 0; }
+    </style>
+    <!-- written by demos/make_audio.py: the voices, their lines, start times and loudness envelopes -->
+    <script src="assets/audio/timing.js"></script>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-width="1920" data-height="1080" data-duration="26.63">
+      <canvas id="stage" width="1920" height="1080"></canvas>
+      <!-- AUDIO:BEGIN -->
+      <audio id="af_heart" src="assets/audio/af_heart.m4a" data-start="1.200" data-duration="3.716" data-track-index="1" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 1}, {"t": 0, "v": 1}, {"t": 3.716, "v": 1}, {"t": 3.716, "v": 1}]}]}'></audio>
+      <audio id="am_fenrir" src="assets/audio/am_fenrir.m4a" data-start="5.816" data-duration="2.708" data-track-index="1" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 1}, {"t": 0, "v": 1}, {"t": 2.708, "v": 1}, {"t": 2.708, "v": 1}]}]}'></audio>
+      <audio id="bf_emma" src="assets/audio/bf_emma.m4a" data-start="9.424" data-duration="3.057" data-track-index="1" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 1}, {"t": 0, "v": 1}, {"t": 3.057, "v": 1}, {"t": 3.057, "v": 1}]}]}'></audio>
+      <audio id="bm_george" src="assets/audio/bm_george.m4a" data-start="13.381" data-duration="3.425" data-track-index="1" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 1}, {"t": 0, "v": 1}, {"t": 3.425, "v": 1}, {"t": 3.425, "v": 1}]}]}'></audio>
+      <audio id="am_puck" src="assets/audio/am_puck.m4a" data-start="17.706" data-duration="3.374" data-track-index="1" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 1}, {"t": 0, "v": 1}, {"t": 3.374, "v": 1}, {"t": 3.374, "v": 1}]}]}'></audio>
+      <audio id="vi-hai-dang" src="assets/audio/vi-hai-dang.m4a" data-start="21.980" data-duration="3.450" data-track-index="1" data-automation='{"version": 1, "lanes": [{"target": "volume", "points": [{"t": 0, "v": 1}, {"t": 0, "v": 1}, {"t": 3.45, "v": 1}, {"t": 3.45, "v": 1}]}]}'></audio>
+      <!-- AUDIO:END -->
+    </div>
+    <script>
+      // One card per voice, in step with its audio: the words light up as they are spoken and the waveform follows
+      // the real loudness of the recording (window.NARRATION[i].env, 30 values a second).
+      const W = 1920, H = 1080;
+      const CARDS = window.NARRATION || [];
+      const DUR = window.DURATION || 30;
+      const ctx = document.getElementById("stage").getContext("2d");
+      const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+      const smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+      const seg = (t, a, b) => clamp((t - a) / (b - a));
+      const GOLD = "#e8b44a", CREAM = "#f3e6c8", DIM = "#7d7262";
+      const SERIF = "Georgia, 'Times New Roman', serif", SANS = "'Helvetica Neue', Arial, sans-serif";
+
+      function active(t) {
+        // the card that is speaking, or the one that just finished until the next one starts
+        let k = 0;
+        CARDS.forEach((c, i) => { if (t >= c.start - 0.45) k = i; });
+        return k;
+      }
+
+      function wrap(text, maxW) {
+        const rows = [[]];
+        for (const w of text.split(" ")) {
+          const row = rows[rows.length - 1];
+          if (row.length && ctx.measureText([...row, w].join(" ")).width > maxW) rows.push([w]); else row.push(w);
+        }
+        return rows;
+      }
+
+      function renderAt(t) {
+        t = clamp(t, 0, DUR);
+        ctx.fillStyle = "#14110d"; ctx.fillRect(0, 0, W, H);
+        const glow = ctx.createRadialGradient(1180, 520, 50, 1180, 520, 900);
+        glow.addColorStop(0, "rgba(232,180,74,0.10)"); glow.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+
+        // header
+        ctx.globalAlpha = smooth(seg(t, 0, 0.6));
+        ctx.fillStyle = CREAM; ctx.font = `700 64px ${SERIF}`; ctx.fillText("One script, many voices", 110, 140);
+        ctx.fillStyle = DIM; ctx.font = `italic 32px ${SERIF}`;
+        ctx.fillText("Kokoro TTS for English, VieNeu-TTS for Vietnamese · both run on your own machine", 112, 192);
+        ctx.globalAlpha = 1;
+
+        if (!CARDS.length) return;
+        const k = active(t), c = CARDS[k];
+
+        // voice list on the left
+        CARDS.forEach((v, i) => {
+          const y = 330 + i * 92, on = i === k;
+          ctx.fillStyle = on ? GOLD : "rgba(243,230,200,0.06)";
+          ctx.beginPath(); ctx.roundRect(110, y - 52, 470, 76, 14); ctx.fill();
+          ctx.fillStyle = on ? "#14110d" : CREAM; ctx.font = `700 34px ${SANS}`; ctx.fillText(v.name, 140, y - 4);
+          ctx.fillStyle = on ? "rgba(20,17,13,0.75)" : DIM; ctx.font = `22px ${SANS}`; ctx.fillText(v.accent, 140, y + 22 - 4);
+        });
+
+        // the card
+        const inA = smooth(seg(t, c.start - 0.45, c.start - 0.1));
+        ctx.globalAlpha = inA;
+        ctx.fillStyle = "rgba(243,230,200,0.05)";
+        ctx.beginPath(); ctx.roundRect(680, 270, 1130, 640, 28); ctx.fill();
+        ctx.fillStyle = GOLD; ctx.font = `800 28px ${SANS}`; ctx.fillText(c.accent.toUpperCase(), 740, 340);
+        ctx.fillStyle = CREAM; ctx.font = `700 76px ${SERIF}`; ctx.fillText(c.name, 740, 425);
+
+        // words light up in proportion to the line's progress
+        const u = seg(t, c.start, c.start + c.dur);
+        ctx.font = `46px ${SERIF}`;
+        const rows = wrap("“" + c.text + "”", 1010);
+        const total = rows.reduce((n, r) => n + r.length, 0);
+        let i = 0;
+        rows.forEach((row, r) => {
+          let x = 740;
+          for (const w of row) {
+            const said = i / total < u + 0.02;
+            ctx.fillStyle = said ? CREAM : "rgba(243,230,200,0.28)";
+            ctx.fillText(w, x, 520 + r * 62);
+            x += ctx.measureText(w + " ").width; i++;
+          }
+        });
+        if (c.english) {
+          ctx.fillStyle = DIM; ctx.font = `italic 32px ${SERIF}`;
+          wrap(c.english, 1010).forEach((row, r) => ctx.fillText(row.join(" "), 740, 540 + rows.length * 62 + r * 42));
+        }
+
+        // waveform: bars from the loudness envelope, the played part in gold
+        const env = c.env || [], N = 90, X0 = 740, Y0 = 830, BW = 1010 / N;
+        for (let b = 0; b < N; b++) {
+          const v = env.length ? env[Math.floor((b / N) * env.length)] : 0;
+          const h = 8 + v * 110;
+          ctx.fillStyle = b / N < u ? GOLD : "rgba(243,230,200,0.18)";
+          ctx.fillRect(X0 + b * BW, Y0 - h / 2, BW * 0.62, h);
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      window.addEventListener("hf-seek", (e) => renderAt(e.detail.time));
+      renderAt(+(new URLSearchParams(location.hash.slice(1)).get("t")) || window.__hfThreeTime || 0);
+    </script>
+  </body>
+</html>

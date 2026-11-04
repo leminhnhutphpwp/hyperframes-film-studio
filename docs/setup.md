@@ -4,10 +4,10 @@ Everything below is git-ignored. Rebuild it on a new machine with these steps.
 
 | Folder / file | What it is | How to set it up |
 |---|---|---|
-| `.venv/` | Python 3.9+ for the film tools (`tools/*.py`) | `python3 -m venv .venv && .venv/bin/pip install playwright imageio-ffmpeg numpy pillow scipy` |
+| `.venv/` | Python 3.9+ for the film tools (`tools/*.py`) | `bash scripts/setup.sh` (or `python3 -m venv .venv && .venv/bin/pip install playwright imageio-ffmpeg numpy pillow scipy`) |
 | `runtime/venv-vieneu/` | Python 3.12 + VieNeu-TTS, for Vietnamese narration | `python3.12 -m venv runtime/venv-vieneu`, then install VieNeu-TTS (the `vieneu` package) and `huggingface_hub` following VieNeu-TTS's own instructions |
-| `runtime/venv-kokoro/` | Python 3.12 + kokoro-onnx (English narration) and faster-whisper (`tools/voice/transcribe.py`) | `python3.12 -m venv runtime/venv-kokoro && runtime/venv-kokoro/bin/pip install kokoro-onnx faster-whisper soundfile` |
-| `runtime/models/` | Voice models (~2.5 GB) | VieNeu and its codec download on first use (`tools/voice/vieneu_local.py`); put the Kokoro onnx model and voices in `runtime/models/kokoro/` |
+| `runtime/venv-kokoro/` | Python 3.12 + kokoro-onnx (English narration) | `bash scripts/setup.sh --kokoro` (uses uv or python3.12); add `faster-whisper` for `tools/voice/transcribe.py` |
+| `runtime/models/` | Voice models | `kokoro/kokoro-v1.0.onnx` and `kokoro/voices-v1.0.bin` are downloaded by `scripts/setup.sh --kokoro` (~350 MB); VieNeu and its codec download on first use (`tools/voice/vieneu_local.py`) |
 | `publish/node_modules/` | YouTube Data / Analytics clients, dotenv | `cd publish && npm install` |
 | `secrets/` | Google OAuth client (`google-oauth-client.json`) and one token folder per channel (`<channel>/youtube-token.json`, `facebook-token.json`) | `node publish/youtube/auth.js --channel=<channel>` signs in and writes the token |
 | `.env` | Image model and Facebook keys | Copy `.env.example` to `.env` and fill it in |

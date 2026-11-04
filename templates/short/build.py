@@ -17,7 +17,7 @@
    "sfx": [{"id": "<library/sfx id> or path", "from": 1, "to": 3, "vol": 0.25, "at": 0}, ...]}
         from/to: narration lines (to = until that line ends; no "to" = to the end); at: seconds into the sound file
 
-Narration: <short>/narration.vi.txt (lines "NNN text") and audio/vi-story/{loi-ke-toan-bo.m4a, timing.json} from
+Narration: <short>/narration.vi.txt (lines "NNN text") and audio/vi-story/{narration.m4a, timing.json} from
 tools/tts_vieneu.py + tools/assemble_narration.py. Captions are cut from the narration text, a few words at a time,
 timed by character count inside each line (Shorts carry burnt-in captions; long films do not).
 """
@@ -131,7 +131,10 @@ def main(short):
     (build / "assets/img").mkdir(parents=True)
     (build / "assets/audio").mkdir(parents=True)
     shutil.copytree(FONTS, build / "assets/fonts")
-    shutil.copy(short / "audio/vi-story/loi-ke-toan-bo.m4a", build / "assets/audio/voice.m4a")
+    voice = short / "audio/vi-story/narration.m4a"
+    if not voice.exists():  # name used by older projects
+        voice = short / "audio/vi-story/loi-ke-toan-bo.m4a"
+    shutil.copy(voice, build / "assets/audio/voice.m4a")
     sfx_lib = {it["id"]: ROOT / "library/sfx" / it["file"] for it in json.loads((ROOT / "library/sfx/library.json").read_text())["items"]}
 
     body, tl = [], []

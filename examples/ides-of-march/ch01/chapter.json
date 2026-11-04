@@ -1,0 +1,24 @@
+{
+ "chapter": 1,
+ "assets": [
+  "kits/roman-senator@purple",
+  "heads/roman-statesman@purple",
+  "kits/roman-lictor@red",
+  "kits/roman-soothsayer@teal",
+  "kits/roman-citizen@wool",
+  "heads/roman-republican@wool",
+  "cutouts/pompey-statue",
+  "props/ides-props"
+ ],
+ "backdrops": [
+  "roman-forum",
+  "roman-atrium",
+  "subura-street",
+  "pompey-hall"
+ ],
+ "tableaux": [
+  "ides-dao",
+  "ides-toga"
+ ],
+ "sfx": []
+}

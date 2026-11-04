@@ -1,0 +1,20 @@
+# The Ides of March: a one-chapter example film. One line = "NNN text"; a blank line ends a paragraph (read in one TTS call).
+# Sources: Suetonius, Life of Caesar 81-82; Plutarch, Life of Caesar 63-66.
+
+# ── The Ides of March
+074 Caesar was told to protect himself. Suetonius says he sent away the bodyguard the Senate had given him.
+075 He believed that being feared was no safer than being loved. It was a brave choice, and the last one he got to make.
+
+076 More than sixty senators joined the plot to kill him. The leaders were Brutus and Cassius, men Caesar had pardoned and promoted.
+077 Brutus was the son of Servilia, Caesar's lover. A popular story says Caesar was his father, but it is almost certainly false: Caesar was only fifteen years older.
+
+078 That morning, says Suetonius, a soothsayer named Spurinna had warned him: beware the Ides of March.
+079 On his way to the Senate, Caesar is said to have remarked that the Ides had come.
+080 Spurinna answered: they have come, but they have not gone.
+
+081 On the fifteenth of March, 44 BC, Caesar went to the meeting of the Senate.
+082 The senators crowded around him as if to ask a favour. Then the daggers came out.
+083 Suetonius says he was stabbed twenty-three times, and fell at the foot of a statue of Pompey.
+084 The famous last words, "Et tu, Brute", were written by Shakespeare, more than fifteen centuries later.
+085 Suetonius records that some said he spoke a Greek phrase, meaning "You too, child?". He adds that others said Caesar said nothing at all.
+086 Plutarch says he simply pulled his toga over his head.
