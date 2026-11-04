@@ -31,7 +31,7 @@ if [ "${1:-}" = "--kokoro" ]; then
   if [ ! -x runtime/venv-kokoro/bin/python ]; then
     if command -v uv >/dev/null; then uv venv -q --python 3.12 runtime/venv-kokoro
     elif command -v python3.12 >/dev/null; then python3.12 -m venv runtime/venv-kokoro
-    else echo "  Kokoro needs Python 3.10+: install uv (https://docs.astral.sh/uv/) or python3.12, then run again."; exit 1; fi
+    else echo "  Kokoro needs uv (https://docs.astral.sh/uv/) or python3.12: install one, then run again."; exit 1; fi
   fi
   if command -v uv >/dev/null; then VIRTUAL_ENV=runtime/venv-kokoro uv pip install -q kokoro-onnx soundfile numpy scipy imageio-ffmpeg
   else runtime/venv-kokoro/bin/pip install -q kokoro-onnx soundfile numpy scipy imageio-ffmpeg; fi

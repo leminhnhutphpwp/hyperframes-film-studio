@@ -1,11 +1,12 @@
 // Frame loop shared by every chapter: pick the segment for time t, render it, draw the overlay, dip at hard cuts.
-// A chapter's js/scenes.js exports SEGMENTS [{a, b, run(t) → {scene, camera}} | {a, b, video, stamp}] and DIPS [t...].
+// A chapter's js/scenes.js exports SEGMENTS [{a, b, run(t) → {scene, camera}} | {a, b, video, stamp}] and optionally DIPS [t...] and TRANSITIONS.
 import { renderer, window01 } from "./engine.js";
 import * as ov from "./overlay.js";
 import * as fx from "./fx.js";
 import * as SC from "../../js/scenes.js";
 
-const { SEGMENTS, DIPS } = SC;
+const { SEGMENTS } = SC;
+const DIPS = SC.DIPS || []; // optional: times of hard cuts that dip to black
 // TRANSITIONS: [{ t, kind: "ink" | "burn" | "paper" | "flash", d }] — a styled cut at t (d seconds each side)
 const TRANSITIONS = SC.TRANSITIONS || [];
 

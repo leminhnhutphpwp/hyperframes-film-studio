@@ -7,7 +7,7 @@
 module.exports = {
   name: 'My Channel',
   handle: '@MyChannel',
-  channelId: 'UCxxxxxxxxxxxxxxxxxxxxxx', // YouTube Studio → Settings → Channel → Advanced settings
+  channelId: null, // filled in by `node publish/youtube/auth.js --channel=<channel>` on first sign-in
   url: 'https://www.youtube.com/@MyChannel',
   subscribeUrl: 'https://www.youtube.com/@MyChannel?sub_confirmation=1',
   tagline: 'Short, sourced history stories told with paper cut-out animation',

@@ -15,13 +15,30 @@ import sys
 import tempfile
 from pathlib import Path
 
-CH = glob.glob(os.path.expanduser("~/.cache/hyperframes/chrome/chrome-headless-shell/*/chrome-headless-shell-linux64/chrome-headless-shell"))[0]
+# HyperFrames' cached headless Chrome (any OS); render anything with HyperFrames once and it is downloaded
+_CH = sorted(glob.glob(os.path.expanduser("~/.cache/hyperframes/chrome/chrome-headless-shell/*/*/chrome-headless-shell")))
+CH = _CH[-1] if _CH else None
 HERE = Path(".")
-FONTS = {"sans": "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf", "serif": "/usr/share/fonts/truetype/noto/NotoSerif-Bold.ttf"}
+def _font(env, *paths):
+    """The first font file that exists: $THUMB_FONT_SANS / $THUMB_FONT_SERIF, then common Linux and macOS paths."""
+    for p in (os.environ.get(env), *paths):
+        if p and Path(p).exists():
+            return p
+    sys.exit(f"no font for thumbnails: set {env} to a .ttf/.otf file")
+
+
+FONTS = {
+    "sans": _font("THUMB_FONT_SANS", "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                  "/System/Library/Fonts/Supplemental/Arial Bold.ttf", "/Library/Fonts/Arial Bold.ttf"),
+    "serif": _font("THUMB_FONT_SERIF", "/usr/share/fonts/truetype/noto/NotoSerif-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+                   "/System/Library/Fonts/Supplemental/Georgia Bold.ttf", "/Library/Fonts/Georgia Bold.ttf"),
+}
 SHADE = {"left": "90deg", "right": "270deg", "top": "180deg", "bottom": "0deg"}
 
 
 def make(j):
+    if not CH:
+        sys.exit("no headless Chrome yet: render any composition with `npx --yes hyperframes@0.8.152 render` once")
     side = j.get("side", "left")
     W, H = (1080, 1920) if j.get("vertical") else (1920, 1080)
     fs, c1, c2 = j.get("fs", 140), j.get("c1", "#fff"), j.get("c2", "#ffcf3a")

@@ -1,20 +1,20 @@
 {
  "duration": 10,
- "terrain": "dong-co-on-doi",
+ "terrain": "grassland",
  "lanes": 12,
  "clash": 5.2,
- "props": "vu-khi-chung",
+ "props": "battle-props",
  "sides": [
   {
    "colour": "blue",
-   "heads": "chau-au-trung-dai",
-   "commander": "chau-au-trung-dai-tuong",
+   "heads": "medieval-europe-soldier-faces",
+   "commander": "medieval-europe-general",
    "ranks": [
-    "chau-au-trung-dai-bo-binh-nang",
-    "chau-au-trung-dai-bo-binh-nang",
-    "chau-au-trung-dai-bo-binh-nang",
-    "chau-au-trung-dai-cung-thu",
-    "chau-au-trung-dai-cung-thu"
+    "medieval-europe-heavy-infantry",
+    "medieval-europe-heavy-infantry",
+    "medieval-europe-heavy-infantry",
+    "medieval-europe-archer",
+    "medieval-europe-archer"
    ],
    "volley": 0.6,
    "advance": 3.0,
@@ -22,13 +22,13 @@
   },
   {
    "colour": "red",
-   "heads": "chau-au-trung-dai",
-   "commander": "chau-au-trung-dai-tuong",
+   "heads": "medieval-europe-soldier-faces",
+   "commander": "medieval-europe-general",
    "ranks": [
-    "chau-au-trung-dai-bo-binh-nang",
-    "chau-au-trung-dai-bo-binh-nang",
-    "chau-au-trung-dai-bo-binh-nang",
-    "chau-au-trung-dai-bo-binh-nang"
+    "medieval-europe-heavy-infantry",
+    "medieval-europe-heavy-infantry",
+    "medieval-europe-heavy-infantry",
+    "medieval-europe-heavy-infantry"
    ],
    "volley": null,
    "advance": 2.6,

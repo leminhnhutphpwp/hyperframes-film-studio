@@ -553,7 +553,7 @@
         });
 
         // banners planted behind the army
-        const banner = LIB.props[`${CFG.props || "vu-khi-chung"}@${side.colour}`];
+        const banner = LIB.props[`${CFG.props || "battle-props"}@${side.colour}`];
         if (banner && banner.parts.banner) {
           for (const z of [-(LANES / 2) * 1.15, (LANES / 2) * 1.15]) {
             const P = banner.parts.banner;

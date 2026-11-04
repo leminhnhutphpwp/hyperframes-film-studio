@@ -52,7 +52,7 @@ def variant(src_dir, colour):
 def need(kind_dir, aid):
     d = LIB / kind_dir / aid
     if not (d / "meta.json").exists():
-        sys.exit(f"library has no {kind_dir}/{aid} — check `tools/asset.py list` or draw it first")
+        sys.exit(f"library has no {kind_dir}/{aid}: draw it with tools/asset.py (see templates/battle/README.md), or use an id from `tools/asset.py list`")
     return d
 
 
@@ -95,7 +95,7 @@ def build(project):
                 d = need("heads", side["heads"])
                 path, parts = copy_parts(variant(d, colour), f"heads/{side['heads']}/{colour}")
                 lib["heads"][key] = {"dir": path, "parts": parts}
-        props = cfg.get("props", "vu-khi-chung")
+        props = cfg.get("props", "battle-props")
         key = f"{props}@{colour}"
         if key not in lib["props"]:
             d = need("props", props)

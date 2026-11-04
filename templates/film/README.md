@@ -6,7 +6,7 @@ so later changes to the template never alter a finished film.
 Starting a new film: copy the example project, which already builds and renders.
 
 ```bash
-cp -r examples/ides-of-march projects/<channel>/<film>
+mkdir -p projects/<channel> && cp -r examples/ides-of-march projects/<channel>/<film>
 # edit narration.en.txt, ch01/chapter.json (assets, backdrops, tableaux) and ch01/js/scenes.js, then:
 bash projects/<channel>/<film>/build.sh --voice
 ```
@@ -67,7 +67,7 @@ frame from that same reference (image-to-image editing), so it stays the same ch
 | Rider | rider and horse drawn as one image (walk, gallop) — no neck or stirrup faults | `rider` |
 
 ```bash
-mkdir -p library/anims/<id> && $EDITOR library/anims/<id>/anim.json     # model it on an existing anim.json (a general, a rider, a horse)
+mkdir -p library/anims/<id> && $EDITOR library/anims/<id>/anim.json     # the anim.json format is in the tools/anim_frames.py docstring
 .venv/bin/python -I tools/anim_frames.py library/anims/<id>              # draws the reference figure, then the frames (3 at a time)
 .venv/bin/python -I tools/anim_frames.py --cut library/anims/<id>        # removes the background, same size, same ground line → frames/
 .venv/bin/python -I tools/rigtest.py /tmp/x.png --anims <id>              # inspect every frame; --video 6 → /tmp/x.mp4
@@ -95,7 +95,7 @@ puppets are still fine for crowds and distant soldiers.
 .venv/bin/python -I tools/rigtest.py /tmp/rig.png                               # 5 characters × 14 poses, ~8 s
 .venv/bin/python -I tools/rigtest.py /tmp/rig.png <kit>[:<head-set>:<headN>] --poses "stand,sit,kneel" --marks
 .venv/bin/python -I tools/rigtest.py /tmp/all.png --all --per 6                  # the whole library, ~20 s
-.venv/bin/python -I tools/rigtest.py /tmp/mounts.png --mounts                      # horses, elephants: standing, 4 walk phases, gallop
+.venv/bin/python -I tools/rigtest.py /tmp/mounts.png --mounts                      # horses, elephants: standing, 4 walk phases, gallop (needs a mount in library/mounts)
 .venv/bin/python -I tools/rigtest.py /tmp/mounts.png --mounts <mount> --rider <kit>  # one animal with a different rider
 ```
 
@@ -133,7 +133,6 @@ for the neck, blue for shoulders/hips, green for elbows/knees. The rig:
   `clips/<name>.<lang>.webm`.
 - Ink transitions: the SVG filter uses `color-interpolation-filters="sRGB"` (before, the ink turned greenish).
 - Newly painted backdrops with high ground: the default camera angle only sees ground → use a smaller, closer, lower
-  backdrop (`stage(id, { width: 18, height: 12, z: -5, y: 2.6 })`, see `projects/my-channel/hannibal/shared/js/stage.js`);
+  backdrop (`stage(id, { width: 18, height: 12, z: -5, y: 2.6 })`, see `shared/js/stage.js`);
   check with `tools/frames.py` before rendering.
-- Real archival material (credited images) and a top-down battle board: `projects/my-channel/hannibal/shared/js/han.js`
-  (`archival`, `board`, `block`, `track`). An oud music bed: `tools/synth_audio.py --bed oud`.
+- An oud music bed: `tools/synth_audio.py --bed oud`.

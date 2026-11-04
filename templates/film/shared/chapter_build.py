@@ -1,9 +1,9 @@
-"""Build one chapter of a Caesar episode as its own HyperFrames project.
+"""Build one chapter of a film as its own HyperFrames project.
 
-  .venv/bin/python -I projects/my-channel/caesar/part-3/shared/chapter_build.py projects/my-channel/caesar/part-3/ch01
+  .venv/bin/python -I <film>/shared/chapter_build.py <film>/ch01 --lang=en     (examples/ides-of-march/build.sh runs this)
 
 The chapter directory holds chapter.json + js/scenes.js. This script
-- cuts the chapter's window out of the full narration (audio/vi-story/narration.m4a, timing.json): chapters meet
+- cuts the chapter's window out of the full narration (audio/<lang>-story/narration.m4a, timing.json): chapters meet
   halfway through the pause between them, so the cut chapters play back to back as the whole film;
 - copies shared/ (engine, map, overlay, fonts) into <chapter>/shared, stages library assets (recoloured) into
   <chapter>/assets/lib, converts the sound effects it names into <chapter>/assets/audio;
@@ -12,7 +12,8 @@ The chapter directory holds chapter.json + js/scenes.js. This script
 
 chapter.json:
   {"chapter": 1,                                  # 1-based, as in narration.vi.txt "# ──" headers
-   "title": ["Từ ngôi làng đến đế chế", "Câu chuyện La Mã"],      # title card text (optional); Vietnamese source text, looked up in TR for other languages
+   "title": ["The Ides of March", "Julius Caesar"],             # title card text (optional), in the narration's language
+                                                   # (a Vietnamese-first film looks it up in strings.<lang>.json)
    "assets": ["kits/roman-citizen@wool", "kits/roman-senator@purple!head", "cutouts/pompey-statue", "anims/<id>", ...],  # kind/id[@colour][!parts kept undyed]; anims/<id> → LIB["<id>@anim"] (makeAnimMount)
    "backdrops": ["roman-forum", "terrains/x"],    # library/backdrops/<id>/image.jpg (or another kind) → assets/lib/backdrops/<id>.jpg
    "tableaux": ["ides-toga"],                      # <project>/tableaux/<id>/ (tools/tableau.py) → assets/tableaux/<id>/
@@ -38,7 +39,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 from asset import LIB  # noqa: E402
 from battle import variant, weapon_class  # noqa: E402
 
-SFX_LIB = ROOT / "library" / "sfx"  # sound library (audio git-ignored, catalog in library/sfx/CATALOG.md)
+SFX_LIB = ROOT / "library" / "sfx"  # your sound library: library/sfx/<any folders>/<id>.<flac|wav|mp3|m4a|ogg> (audio is git-ignored)
 FF = imageio_ffmpeg.get_ffmpeg_exe()
 
 
@@ -196,7 +197,8 @@ def main(chdir, lang="vi"):
     for e in cfg.get("sfx", []):
         f = aud / f"{e['src']}.m4a"
         if not f.exists():
-            hits = list((PROJECT / "audio/sfx").glob(f"{e['src']}.flac")) + list(SFX_LIB.glob(f"*/*/{e['src']}.flac"))  # self-made first (tools/synth_audio.py)
+            exts = (".flac", ".wav", ".mp3", ".m4a", ".ogg")  # the film's own sounds first (tools/synth_audio.py), then the library
+            hits = [p for p in (PROJECT / "audio/sfx").glob(f"{e['src']}.*") if p.suffix in exts] + [p for p in SFX_LIB.rglob(f"{e['src']}.*") if p.suffix in exts]
             if not hits:
                 sys.exit(f"sound {e['src']} not in {SFX_LIB}")
             subprocess.run([FF, "-hide_banner", "-loglevel", "error", "-y", "-i", str(hits[0]), "-c:a", "aac", "-b:a", "128k", str(f)], check=True)

@@ -9,7 +9,7 @@ animation, vertical Shorts and data explainers. You write the narration, and the
 - makes thumbnails and Shorts;
 - uploads the result to YouTube or a Facebook page, always as private first.
 
-It is built to be driven by a coding agent such as Claude Code or Codex: every step is a script with a `--help`, and
+It is built to be driven by a coding agent such as Claude Code or Codex: every step is a script, and
 [`AGENTS.md`](AGENTS.md) tells the agent where things are and which commands work. A complete example film builds and
 renders with one command.
 
@@ -19,7 +19,34 @@ renders with one command.
 
 Every clip below was rendered from this repository with `npx hyperframes render`, sound included: narration from local
 TTS, music and effects generated in code.
-▶ **[Watch the demo reel with sound (68 s)](https://github.com/leminhnhutphpwp/hyperframes-film-studio/releases/download/v0.3.0/demo-reel.mp4)**
+
+**Demo reel with sound (68 s)**: the example film, voices, a narrated Short and explainer, animals, stick figures and
+a battle.
+
+https://github.com/user-attachments/assets/24ab1e43-9485-478e-b8ab-608496543135
+
+<details>
+<summary><b>More clips with sound</b>: history film, voices, daily-life Short, explainer</summary>
+
+**History film** (`examples/ides-of-march`): English narration, the soothsayer's warning and the Ides of March.
+
+https://github.com/user-attachments/assets/939692d5-4cea-41df-b6bc-0f9a4a141c5a
+
+**Voices** (`demos/voices`): Kokoro English voices and a Vietnamese VieNeu voice.
+
+https://github.com/user-attachments/assets/6c648f4a-2f49-451c-996e-793c90c6cf0b
+
+**Daily-life Short** (`demos/daily-life`): 9:16, narrated, captions that follow the voice.
+
+https://github.com/user-attachments/assets/1eb214c5-1a4e-4326-afec-ca8a65c01e15
+
+**Explainer** (`demos/explainer`): the chart moves with the narration.
+
+https://github.com/user-attachments/assets/06244742-8e77-46f1-b869-0723feb7340e
+
+</details>
+
+The GIFs below loop silently so the page loads fast:
 
 <table>
   <tr>
@@ -92,7 +119,8 @@ Vietnamese TTS, YouTube sign-in and the rest of the setup are in [`docs/setup.md
 
 ## Making a film
 
-1. Copy the example: `cp -r examples/ides-of-march projects/<channel>/<film>`.
+1. Copy the example: `mkdir -p projects/<channel> && cp -r examples/ides-of-march projects/<channel>/<film>`, and copy
+   `channels/my-channel` to `channels/<channel>` (the channel's name, YouTube id and language, used when uploading).
 2. Write `narration.en.txt` (one `NNN text` line per sentence, `# ── Title` for each chapter) and `source/facts.md`
    (one source per fact). Edit `ch01/chapter.json` (which assets and backdrops the chapter uses) and `ch01/js/scenes.js`
    (what happens on screen, timed to the narration lines). Add `ch02/`, `ch03/` … for more chapters.

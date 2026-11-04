@@ -54,3 +54,7 @@ projects/*/*/ch*/index.html
 projects/*/*/ch*/js/data.js
 # per-paragraph TTS takes (narration.m4a, timing.json and lines.json are kept)
 **/audio/*-story/p[0-9][0-9].wav
+projects/*/*/shared/
+projects/*/*/ch*/hyperframes.json
+projects/*/*/ch*/package.json
+projects/*/*/ch*/meta.json

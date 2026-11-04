@@ -1,4 +1,4 @@
-// Chapter 10 · The Ides of March (lines 74–86). Chapter seconds; the killing is shown only as daggers raised and a fall to dark.
+// The Ides of March (narration lines 74–86). Chapter seconds; the killing is shown only as daggers raised and a fall to dark.
 import { seg, smooth, easeIn, lerp, window01, piece, prop, applyPose, at, end, cue } from "../shared/js/engine.js";
 import * as ov from "../shared/js/overlay.js";
 import * as fx from "../shared/js/fx.js";
