@@ -23,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import imagegen  # noqa: E402
 
-# Drawings go through tools/imagegen.py (IMAGE_API_URL / IMAGE_API_KEY / IMAGE_MODEL).
+# Drawings go through tools/imagegen.py (IMAGE_BACKEND=codex or api).
 # Several processes can run at once: each drawing is claimed with an exclusive <name>.claim file.
 WORKERS = int(os.environ.get("ANIM_WORKERS", "3"))
 

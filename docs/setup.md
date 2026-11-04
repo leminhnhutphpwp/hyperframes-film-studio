@@ -16,9 +16,11 @@ Never print, commit or send the contents of `secrets/` or `.env`.
 
 ## External tools
 
-- **Image model**: any OpenAI-compatible Images API (`/images/generations` and `/images/edits`). Set `IMAGE_API_URL`,
-  `IMAGE_API_KEY` and `IMAGE_MODEL` in `.env`; the default is OpenAI's API with `gpt-image-1`. `tools/asset.py` can
-  also draw through the Codex CLI (`ASSET_BACKEND=codex`).
+- **Image backend** (`tools/imagegen.py`, used by every drawing tool), set with `IMAGE_BACKEND` in `.env`:
+  - `codex`: the Codex CLI on this machine. Install it, run `codex login` once, and nothing else is needed.
+  - `api`: any OpenAI-compatible Images API (`/images/generations` and `/images/edits`). Set `IMAGE_API_KEY`, and
+    `IMAGE_API_URL` / `IMAGE_MODEL` for a provider other than OpenAI (default `gpt-image-1`).
+  - Empty: the API when a key is set, otherwise Codex if it's installed.
 - **HyperFrames**: `npx --yes hyperframes@0.8.152 render` renders a composition to MP4 and needs `ffmpeg` / `ffprobe`
   on the PATH. To preview without system ffmpeg: `.venv/bin/python -I tools/frames.py <dir> out/ --video 24`.
 - **ffmpeg** inside Python comes from `imageio_ffmpeg.get_ffmpeg_exe()` (installed in `.venv`).

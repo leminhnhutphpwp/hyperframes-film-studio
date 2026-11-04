@@ -69,7 +69,7 @@ runtime/venv-vieneu/bin/python tools/tts_vieneu.py $P/narration.vi.txt $P/audio/
 ## 3. Tài nguyên hình (thư viện `library/`)
 
 Tra trước, chỉ vẽ cái còn thiếu: `.venv/bin/python -I tools/asset.py list --era ... --text ...`.
-Vẽ qua mô hình ảnh cấu hình trong `.env` (`asset.py draw kit|heads|props|cutout|backdrop|terrain ...`), **tối đa 3 hình cùng lúc**, không chạy song
+Vẽ qua Codex CLI trên máy hoặc Images API (chọn bằng `IMAGE_BACKEND` trong `.env`; `asset.py draw kit|heads|props|cutout|backdrop|terrain ...`), **tối đa 3 hình cùng lúc**, không chạy song
 song với render hay TTS (máy hết RAM). Gom lệnh vẽ của một dự án vào `$P/batches/<tên>_batch.sh` để chạy lại được (đợt vẽ cho thư viện chung, không thuộc phim nào: `tools/batches/`).
 Id tài nguyên không được trùng (chapter_build dừng nếu trùng). Bản đồ: `tools/map_render.py shared/map/spec.json ...`.
 Thư viện âm thanh có sẵn: `library/sfx/CATALOG.md` (gió, mưa, chợ, thú vật, nhạc ngắn — đã kiểm giấy phép). Âm thanh tự tạo, không tải: `tools/synth_audio.py` (súng, đại bác, tiếng gươm, nền lyre/tanpura). Nhạc tải về: hỏi trước.

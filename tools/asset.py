@@ -1,8 +1,8 @@
 """Asset library for paper cut-out history videos.
 
 Look up before drawing; draw only what is missing. Drawing goes through an image model, then sheets are
-cut into transparent parts with pivots. Backend: ASSET_BACKEND=api (default; any OpenAI-compatible Images API,
-configured in tools/imagegen.py) or ASSET_BACKEND=codex (`codex exec`, using the Codex CLI's image tool).
+cut into transparent parts with pivots. The image backend (the Codex CLI on this machine, or an
+OpenAI-compatible Images API) is chosen in tools/imagegen.py with IMAGE_BACKEND.
 
   asset.py list   [--kind K] [--era E] [--region R] [--role X] [--text WORDS]
   asset.py draw kit     <id> --era E --region R --role X --desc "costume, headwear, weapon, shield"
@@ -21,7 +21,6 @@ Run with the project venv:  .venv/bin/python -I tools/asset.py ...
 import argparse
 import json
 import os
-import subprocess
 import sys
 from datetime import date
 from pathlib import Path
@@ -103,18 +102,8 @@ def magenta_share(path):
     return float(((r > 200) & (b > 200) & (g < 90)).mean())
 
 
-BACKEND = os.environ.get("ASSET_BACKEND", "api")
-
-
 def generate(prompt, d):
     """Draw one landscape 3:2 image into d/sheet.png; return an error string or None."""
-    if BACKEND == "codex":
-        task = (
-            f"Use your image generation tool to create ONE image (landscape 3:2) and save it in the current directory as sheet.png. "
-            f"{prompt}\n\nAfter saving, reply only with the file path."
-        )
-        r = subprocess.run(["codex", "exec", "--skip-git-repo-check", "-s", "workspace-write", task], cwd=d, capture_output=True, text=True, timeout=600)
-        return None if (d / "sheet.png").exists() else r.stdout[-2000:] + r.stderr[-2000:]
     try:
         (d / "sheet.png").write_bytes(imagegen.generate(prompt, "1536x1024"))
     except Exception as e:  # noqa: BLE001 — report any transport/format failure to the caller
@@ -431,10 +420,10 @@ def cmd_draw(a):
     keyed = a.kind in ("kit", "heads", "props", "mount", "cutout")
     for attempt in (1, 2):
         (d / "sheet.png").unlink(missing_ok=True)
-        print(f"drawing {a.kind}/{a.id} via {BACKEND} (about a minute, try {attempt})…", flush=True)
+        print(f"drawing {a.kind}/{a.id} via {imagegen.backend()} (about a minute, try {attempt})…", flush=True)
         err = generate(prompt, d)
         if err:
-            sys.exit(f"{BACKEND} did not produce sheet.png:\n{err}")
+            sys.exit(f"{imagegen.backend()} did not produce sheet.png:\n{err}")
         share = magenta_share(d / "sheet.png") if keyed else 1.0
         if share >= 0.4:
             break

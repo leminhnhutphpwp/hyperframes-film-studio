@@ -45,9 +45,17 @@ cd samples/battle-paper && npx --yes hyperframes@0.8.152 render && cd ../..
 # Python tools
 python3 -m venv .venv && .venv/bin/pip install playwright imageio-ffmpeg numpy pillow scipy
 
-# Image model for drawing assets (any OpenAI-compatible Images API)
-cp .env.example .env    # then set IMAGE_API_KEY, and IMAGE_API_URL / IMAGE_MODEL if you don't use OpenAI
+cp .env.example .env
 ```
+
+Then pick how the studio draws pictures:
+
+| Backend | Setup | Good for |
+|---|---|---|
+| **Codex CLI** (`IMAGE_BACKEND=codex`) | Install the [Codex CLI](https://github.com/openai/codex) and sign in once with `codex login`. No API key needed. | Drawing on your own machine with your existing account. |
+| **Images API** (`IMAGE_BACKEND=api`) | Set `IMAGE_API_KEY` in `.env`. Change `IMAGE_API_URL` and `IMAGE_MODEL` to use any other OpenAI-compatible provider. | Batch drawing, servers and CI. |
+
+Leave `IMAGE_BACKEND` empty and the studio picks for you: the API when a key is set, otherwise Codex if it's installed.
 
 Draw a new asset, then look it up:
 
@@ -76,8 +84,8 @@ The full workflow, including how to keep each film different enough for YouTube'
 
 ## Good to know
 
-- **Images:** drawings go through `tools/imagegen.py`, which talks to any OpenAI-compatible Images API. Use a model and
-  an account whose terms allow your use.
+- **Images:** every drawing tool goes through `tools/imagegen.py`, using either the Codex CLI on your machine or an
+  OpenAI-compatible Images API. Use an account and a model whose terms allow your use.
 - **Voices:** Vietnamese uses VieNeu-TTS and English uses Kokoro. Both run locally; models download on first use.
 - **Secrets:** `.env` and `secrets/` are git-ignored. Never commit API keys or OAuth tokens.
 - **Music and sound:** only add audio you have the right to use, and keep its source and licence next to it.
@@ -95,5 +103,8 @@ Studio làm phim lịch sử dạng rối giấy cho kênh YouTube không lộ m
 còn lại: vẽ thư viện nhân vật và phông bằng mô hình ảnh, đọc lời kể bằng giọng máy chạy trong máy (tiếng Việt hoặc
 tiếng Anh), dựng cảnh bằng HTML rồi render ra MP4 bằng HyperFrames, làm thumbnail và Shorts, và đăng lên YouTube ở
 chế độ riêng tư.
+
+Để vẽ hình, bạn dùng một trong hai cách: cài Codex CLI trên máy và đăng nhập (`codex login`, không cần khoá API),
+hoặc điền khoá của một dịch vụ Images API tương thích OpenAI vào `.env`.
 
 Bắt đầu từ phần **Quick start** ở trên. Quy trình làm một phim đầy đủ nằm ở [`docs/quy-trinh.md`](docs/quy-trinh.md).
